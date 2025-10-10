@@ -118,7 +118,7 @@ onMounted(() => {
     <!-- Header -->
     <div class="text-center mb-8">
       <h1 class="text-5xl font-hp text-hp-gold mb-2 drop-shadow-lg">
-        🧙‍♂️ Magical Math Academy 🧙‍♀️
+        🧙‍♂️ Hogwards Math Academy 🧙‍♀️
       </h1>
       <p class="text-xl text-hp-gold/80">Master your spells of numbers!</p>
     </div>
@@ -218,10 +218,12 @@ onMounted(() => {
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
+  appearance: none;
   margin: 0;
 }
 
 input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 </style>
