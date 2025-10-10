@@ -1,23 +1,29 @@
 {
   "name": "multidiv",
   "version": "1.0.0",
-  "description": "A simple multiplication and division calculator web application",
+  "description": "A magical math academy for multiplication and division practice",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "build": "cd client && npm install && npm run build",
+    "install:all": "cd client && npm install && npm install"
   },
   "keywords": [
-    "calculator",
+    "math",
+    "education",
     "multiplication",
-    "division"
+    "division",
+    "vue",
+    "express"
   ],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "express": "^4.18.2"
-  },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
   }
 }

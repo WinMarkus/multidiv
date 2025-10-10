@@ -2,9 +2,9 @@ services:
   - type: web
     name: multidiv
     env: node
-    buildCommand: npm install
+    buildCommand: cd client && npm install && npm run build && cd .. && npm install
     startCommand: npm start
-    healthCheckPath: /health
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
