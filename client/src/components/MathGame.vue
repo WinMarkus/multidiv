@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import Explanation from './Explanation.vue'
 import Celebration from './Celebration.vue'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 const currentProblem = ref(null)
 const userAnswer = ref('')
