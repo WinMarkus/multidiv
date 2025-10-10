@@ -134,10 +134,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Catch-all route for production
+// Catch-all route for production - serve index.html for all non-API routes
 if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    res.sendFile('../client/dist/index.html', { root: __dirname });
+  const path = require('path');
+  app.use((req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
   });
 }
 
