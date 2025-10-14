@@ -76,9 +76,9 @@ async function submitAnswer() {
         }, 3000)
       }
       
-      // Increase difficulty every 3 correct answers
-      if (correctStreak.value % 3 === 0) {
-        difficulty.value = Math.min(difficulty.value + 1, 99)
+      // Increase difficulty every 5 correct answers
+      if (correctStreak.value % 5 === 0) {
+        difficulty.value = Math.min(difficulty.value + 1, 10)
       }
       
       setTimeout(() => {
@@ -97,8 +97,12 @@ async function submitAnswer() {
 
 function toggleProblemType() {
   problemType.value = problemType.value === 'multiplication' ? 'division' : 'multiplication'
-  difficulty.value = 1
-  correctStreak.value = 0
+  // Don't reset difficulty when switching problem types
+  fetchProblem()
+}
+
+function onDifficultyChange() {
+  // Fetch new problem when difficulty changes
   fetchProblem()
 }
 
@@ -115,6 +119,16 @@ onMounted(() => {
 
 <template>
   <div class="container mx-auto px-4 py-8 min-h-screen flex flex-col items-center justify-center">
+    <!-- Navigation -->
+    <div class="absolute top-4 right-4">
+      <router-link 
+        to="/austria-quiz"
+        class="bg-hp-burgundy hover:bg-hp-burgundy/80 text-hp-gold font-hp px-4 py-2 rounded-lg border-2 border-hp-gold/50 transition-all duration-300 hover:scale-105 shadow-lg"
+      >
+        🏰 Österreich Quiz
+      </router-link>
+    </div>
+
     <!-- Header -->
     <div class="text-center mb-8">
       <h1 class="text-5xl font-hp text-hp-gold mb-2 drop-shadow-lg">
@@ -145,14 +159,39 @@ onMounted(() => {
       </div>
     </div>
     
-    <!-- Problem Type Toggle -->
-    <div class="mb-6">
+    <!-- Controls -->
+    <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-center">
+      <!-- Problem Type Toggle -->
       <button
         @click="toggleProblemType"
         class="bg-hp-burgundy hover:bg-hp-burgundy/80 text-hp-gold font-hp px-6 py-3 rounded-lg border-2 border-hp-gold/50 transition-all duration-300 hover:scale-105 shadow-lg"
       >
         Switch to {{ problemType === 'multiplication' ? 'Division' : 'Multiplication' }}
       </button>
+      
+      <!-- Difficulty Selector -->
+      <div class="flex items-center gap-3">
+        <label for="difficulty" class="text-hp-gold font-hp text-lg">
+          Difficulty:
+        </label>
+        <select
+          id="difficulty"
+          v-model="difficulty"
+          @change="onDifficultyChange"
+          class="bg-hp-navy/80 text-hp-gold border-2 border-hp-gold/50 rounded-lg px-4 py-2 font-hp focus:outline-none focus:ring-2 focus:ring-hp-gold focus:border-transparent backdrop-blur"
+        >
+          <option value="1">Apprentice (1)</option>
+          <option value="2">Novice (2)</option>
+          <option value="3">Adept (3)</option>
+          <option value="4">Expert (4)</option>
+          <option value="5">Master (5)</option>
+          <option value="6">Grandmaster (6)</option>
+          <option value="7">Archmage (7)</option>
+          <option value="8">Legend (8)</option>
+          <option value="9">Mythical (9)</option>
+          <option value="10">Godlike (10)</option>
+        </select>
+      </div>
     </div>
     
     <!-- Main Problem Card -->

@@ -17,19 +17,44 @@ function generateProblem(difficulty, type) {
   let num1, num2, answer;
   
   if (type === 'multiplication') {
-    // Multiplication: 1x1 to 99x99
-    const maxNum = Math.min(difficulty + 1, 99);
-    num1 = Math.floor(Math.random() * maxNum) + 1;
-    num2 = Math.floor(Math.random() * maxNum) + 1;
+    // Multiplication: Scale more aggressively with difficulty
+    let maxNum1, maxNum2;
+    
+    switch(difficulty) {
+      case 1: maxNum1 = 5; maxNum2 = 5; break;      // 1-5 × 1-5
+      case 2: maxNum1 = 10; maxNum2 = 10; break;    // 1-10 × 1-10
+      case 3: maxNum1 = 12; maxNum2 = 12; break;    // 1-12 × 1-12 (times tables)
+      case 4: maxNum1 = 15; maxNum2 = 15; break;    // 1-15 × 1-15
+      case 5: maxNum1 = 20; maxNum2 = 20; break;    // 1-20 × 1-20
+      case 6: maxNum1 = 25; maxNum2 = 25; break;    // 1-25 × 1-25
+      case 7: maxNum1 = 50; maxNum2 = 20; break;    // 1-50 × 1-20
+      case 8: maxNum1 = 99; maxNum2 = 25; break;    // 1-99 × 1-25
+      case 9: maxNum1 = 99; maxNum2 = 50; break;    // 1-99 × 1-50
+      default: maxNum1 = 99; maxNum2 = 99; break;   // 1-99 × 1-99
+    }
+    
+    num1 = Math.floor(Math.random() * maxNum1) + 1;
+    num2 = Math.floor(Math.random() * maxNum2) + 1;
     answer = num1 * num2;
   } else {
-    // Division: start small and grow
-    const maxDivisor = Math.min(difficulty + 1, 99);
-    const maxDividend = Math.min(difficulty * 10 + 10, 999);
+    // Division: Scale with difficulty, ensure clean division
+    let maxDivisor, maxQuotient;
+    
+    switch(difficulty) {
+      case 1: maxDivisor = 5; maxQuotient = 10; break;     // ÷1-5, quotient 1-10
+      case 2: maxDivisor = 10; maxQuotient = 10; break;    // ÷1-10, quotient 1-10
+      case 3: maxDivisor = 12; maxQuotient = 12; break;    // ÷1-12, quotient 1-12
+      case 4: maxDivisor = 15; maxQuotient = 15; break;    // ÷1-15, quotient 1-15
+      case 5: maxDivisor = 20; maxQuotient = 20; break;    // ÷1-20, quotient 1-20
+      case 6: maxDivisor = 25; maxQuotient = 25; break;    // ÷1-25, quotient 1-25
+      case 7: maxDivisor = 20; maxQuotient = 50; break;    // ÷1-20, quotient 1-50
+      case 8: maxDivisor = 25; maxQuotient = 99; break;    // ÷1-25, quotient 1-99
+      case 9: maxDivisor = 50; maxQuotient = 99; break;    // ÷1-50, quotient 1-99
+      default: maxDivisor = 99; maxQuotient = 99; break;   // ÷1-99, quotient 1-99
+    }
     
     num2 = Math.floor(Math.random() * maxDivisor) + 1;
-    // Ensure clean division
-    const quotient = Math.floor(Math.random() * (Math.floor(maxDividend / num2))) + 1;
+    const quotient = Math.floor(Math.random() * maxQuotient) + 1;
     num1 = num2 * quotient;
     answer = quotient;
   }
