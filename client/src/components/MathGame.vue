@@ -25,9 +25,18 @@ const score = computed(() => {
 const problemDisplay = computed(() => {
   if (!currentProblem.value) return ''
   const { num1, num2, type } = currentProblem.value
-  return type === 'multiplication' 
-    ? `${num1} × ${num2}` 
-    : `${num1} ÷ ${num2}`
+  switch(type) {
+    case 'multiplication':
+      return `${num1} × ${num2}`
+    case 'division':
+      return `${num1} ÷ ${num2}`
+    case 'addition':
+      return `${num1} + ${num2}`
+    case 'subtraction':
+      return `${num1} - ${num2}`
+    default:
+      return ''
+  }
 })
 
 async function fetchProblem() {
@@ -96,7 +105,11 @@ async function submitAnswer() {
 }
 
 function toggleProblemType() {
-  problemType.value = problemType.value === 'multiplication' ? 'division' : 'multiplication'
+  // Cycle through all four problem types
+  const types = ['multiplication', 'division', 'addition', 'subtraction']
+  const currentIndex = types.indexOf(problemType.value)
+  const nextIndex = (currentIndex + 1) % types.length
+  problemType.value = types[nextIndex]
   // Don't reset difficulty when switching problem types
   fetchProblem()
 }
@@ -166,7 +179,7 @@ onMounted(() => {
         @click="toggleProblemType"
         class="bg-hp-burgundy hover:bg-hp-burgundy/80 text-hp-gold font-hp px-6 py-3 rounded-lg border-2 border-hp-gold/50 transition-all duration-300 hover:scale-105 shadow-lg"
       >
-        Switch to {{ problemType === 'multiplication' ? 'Division' : 'Multiplication' }}
+        Switch Operation Type
       </button>
       
       <!-- Difficulty Selector -->
@@ -200,7 +213,10 @@ onMounted(() => {
         <div class="inline-block bg-hp-navy/50 px-6 py-2 rounded-lg border border-hp-gold/30">
           <p class="text-hp-gold/70 text-sm mb-1">Current Challenge</p>
           <p class="text-sm text-hp-gold/60">
-            {{ problemType === 'multiplication' ? 'Multiplication Spell' : 'Division Charm' }}
+            {{ problemType === 'multiplication' ? 'Multiplication Spell' : 
+               problemType === 'division' ? 'Division Charm' : 
+               problemType === 'addition' ? 'Addition Enchantment' : 
+               'Subtraction Sorcery' }}
           </p>
         </div>
       </div>
