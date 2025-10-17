@@ -2,6 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import Explanation from './Explanation.vue'
 import Celebration from './Celebration.vue'
+import HarryPotterAnimation from './HarryPotterAnimation.vue'
+import JokeDisplay from './JokeDisplay.vue'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -16,6 +18,10 @@ const explanation = ref(null)
 const feedback = ref('')
 const problemType = ref('multiplication')
 const showCelebration = ref(false)
+const showHPAnimation = ref(false)
+const hpAnimationType = ref('streak')
+const showJoke = ref(false)
+const questionsSinceLastJoke = ref(0)
 
 const score = computed(() => {
   if (totalAttempts.value === 0) return 0
@@ -57,6 +63,7 @@ async function submitAnswer() {
   if (!userAnswer.value || !currentProblem.value) return
   
   totalAttempts.value++
+  questionsSinceLastJoke.value++
   
   try {
     const response = await fetch(`${API_URL}/api/check`, {
@@ -77,17 +84,43 @@ async function submitAnswer() {
       correctStreak.value++
       feedback.value = '✨ Correct! Well done! ✨'
       
-      // Check if we should show celebration
+      // Show Harry Potter animation for milestone streak achievements
       if (correctStreak.value >= 5 && correctStreak.value % 5 === 0) {
-        showCelebration.value = true
+        hpAnimationType.value = 'streak'
+        showHPAnimation.value = true
         setTimeout(() => {
-          showCelebration.value = false
-        }, 3000)
+          showHPAnimation.value = false
+        }, 4000) // Give 4 seconds to enjoy the animation
       }
+      
+      // Check for level up
+      const oldDifficulty = difficulty.value
       
       // Increase difficulty every 5 correct answers
       if (correctStreak.value % 5 === 0) {
         difficulty.value = Math.min(difficulty.value + 1, 10)
+        
+        // Show level up animation if difficulty actually increased
+        if (difficulty.value > oldDifficulty) {
+          setTimeout(() => {
+            hpAnimationType.value = 'levelup'
+            showHPAnimation.value = true
+            setTimeout(() => {
+              showHPAnimation.value = false
+            }, 4000)
+          }, 4500) // Show after streak animation finishes
+        }
+      }
+      
+      // Random joke display (10-20% chance after at least 5 questions)
+      if (questionsSinceLastJoke.value >= 5 && Math.random() < 0.15) {
+        setTimeout(() => {
+          showJoke.value = true
+          questionsSinceLastJoke.value = 0
+          setTimeout(() => {
+            showJoke.value = false
+          }, 6000) // Give 6 seconds to read and enjoy the joke
+        }, 2000)
       }
       
       setTimeout(() => {
@@ -98,6 +131,17 @@ async function submitAnswer() {
       feedback.value = `Not quite. The answer is ${result.correctAnswer}`
       explanation.value = result.explanation
       showExplanation.value = true
+      
+      // Still check for random joke on wrong answers (lower probability)
+      if (questionsSinceLastJoke.value >= 8 && Math.random() < 0.08) {
+        setTimeout(() => {
+          showJoke.value = true
+          questionsSinceLastJoke.value = 0
+          setTimeout(() => {
+            showJoke.value = false
+          }, 6000)
+        }, 3000)
+      }
     }
   } catch (error) {
     console.error('Error checking answer:', error)
@@ -265,6 +309,19 @@ onMounted(() => {
     <Celebration 
       v-if="showCelebration"
       :streak="correctStreak"
+    />
+    
+    <!-- Harry Potter Animation -->
+    <HarryPotterAnimation
+      v-if="showHPAnimation"
+      :streak="correctStreak"
+      :level="difficulty"
+      :trigger-type="hpAnimationType"
+    />
+    
+    <!-- Joke Display -->
+    <JokeDisplay
+      v-if="showJoke"
     />
   </div>
 </template>
