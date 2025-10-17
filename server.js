@@ -37,7 +37,7 @@ function generateProblem(difficulty, type) {
     num1 = Math.floor(Math.random() * maxNum1) + 1;
     num2 = Math.floor(Math.random() * maxNum2) + 1;
     answer = num1 * num2;
-  } else {
+  } else if (type === 'division') {
     // Division: Scale with difficulty, ensure clean division
     let maxDivisor, maxQuotient;
     
@@ -58,6 +58,60 @@ function generateProblem(difficulty, type) {
     const quotient = Math.floor(Math.random() * maxQuotient) + 1;
     num1 = num2 * quotient;
     answer = quotient;
+  } else if (type === 'addition') {
+    // Addition: 4-digit numbers with at least one carryover
+    // Generate numbers that will have at least one digit sum >= 10
+    let hasCarryover = false;
+    let attempts = 0;
+    
+    while (!hasCarryover && attempts < 100) {
+      // Generate 4-digit numbers (1000-9999)
+      num1 = Math.floor(Math.random() * 9000) + 1000;
+      num2 = Math.floor(Math.random() * 9000) + 1000;
+      
+      // Check if there's at least one carryover
+      const str1 = num1.toString();
+      const str2 = num2.toString();
+      
+      for (let i = 0; i < 4; i++) {
+        const digit1 = parseInt(str1[3 - i]);
+        const digit2 = parseInt(str2[3 - i]);
+        if (digit1 + digit2 >= 10) {
+          hasCarryover = true;
+          break;
+        }
+      }
+      attempts++;
+    }
+    
+    answer = num1 + num2;
+  } else if (type === 'subtraction') {
+    // Subtraction: 4-digit numbers with at least one borrowing
+    // Generate numbers where at least one digit in num1 is less than the corresponding digit in num2
+    let hasBorrowing = false;
+    let attempts = 0;
+    
+    while (!hasBorrowing && attempts < 100) {
+      // Generate 4-digit numbers (1000-9999)
+      num1 = Math.floor(Math.random() * 9000) + 1000;
+      num2 = Math.floor(Math.random() * (num1 - 1000)) + 1000; // Ensure num2 < num1
+      
+      // Check if there's at least one borrowing
+      const str1 = num1.toString();
+      const str2 = num2.toString();
+      
+      for (let i = 0; i < 4; i++) {
+        const digit1 = parseInt(str1[3 - i]);
+        const digit2 = parseInt(str2[3 - i]);
+        if (digit1 < digit2) {
+          hasBorrowing = true;
+          break;
+        }
+      }
+      attempts++;
+    }
+    
+    answer = num1 - num2;
   }
   
   return { num1, num2, answer, type };
@@ -89,7 +143,7 @@ function generateExplanation(num1, num2, type) {
       total,
       explanation: `Breaking down ${num1} × ${num2}:`
     };
-  } else {
+  } else if (type === 'division') {
     // Long division
     const quotient = Math.floor(num1 / num2);
     const remainder = num1 % num2;
@@ -127,6 +181,81 @@ function generateExplanation(num1, num2, type) {
       remainder,
       explanation: `Dividing ${num1} by ${num2}:`
     };
+  } else if (type === 'addition') {
+    // Addition with carryover
+    const steps = [];
+    const str1 = num1.toString().padStart(4, '0');
+    const str2 = num2.toString().padStart(4, '0');
+    let carry = 0;
+    let result = '';
+    
+    for (let i = 3; i >= 0; i--) {
+      const digit1 = parseInt(str1[i]);
+      const digit2 = parseInt(str2[i]);
+      const sum = digit1 + digit2 + carry;
+      const digitResult = sum % 10;
+      carry = Math.floor(sum / 10);
+      
+      steps.push({
+        description: `${digit1} + ${digit2}${carry > 0 ? ` (+ carry ${carry})` : ''} = ${sum}`,
+        position: 3 - i,
+        digit1,
+        digit2,
+        sum,
+        carry: carry,
+        result: digitResult
+      });
+      
+      result = digitResult + result;
+    }
+    
+    if (carry > 0) {
+      result = carry + result;
+    }
+    
+    return {
+      steps,
+      result: parseInt(result),
+      explanation: `Adding ${num1} + ${num2} step by step:`
+    };
+  } else if (type === 'subtraction') {
+    // Subtraction with borrowing
+    const steps = [];
+    const str1 = num1.toString().padStart(4, '0');
+    const str2 = num2.toString().padStart(4, '0');
+    let borrow = 0;
+    let result = '';
+    
+    for (let i = 3; i >= 0; i--) {
+      let digit1 = parseInt(str1[i]) - borrow;
+      const digit2 = parseInt(str2[i]);
+      
+      if (digit1 < digit2) {
+        digit1 += 10;
+        borrow = 1;
+      } else {
+        borrow = 0;
+      }
+      
+      const diff = digit1 - digit2;
+      
+      steps.push({
+        description: `${digit1}${borrow > 0 ? ' (borrowed)' : ''} - ${digit2} = ${diff}`,
+        position: 3 - i,
+        digit1: parseInt(str1[i]),
+        digit2,
+        diff,
+        borrowed: borrow > 0
+      });
+      
+      result = diff + result;
+    }
+    
+    return {
+      steps,
+      result: parseInt(result),
+      explanation: `Subtracting ${num2} from ${num1} step by step:`
+    };
   }
 }
 
@@ -141,7 +270,25 @@ app.get('/api/problem', (req, res) => {
 
 app.post('/api/check', (req, res) => {
   const { num1, num2, userAnswer, type } = req.body;
-  const correctAnswer = type === 'multiplication' ? num1 * num2 : Math.floor(num1 / num2);
+  let correctAnswer;
+  
+  switch(type) {
+    case 'multiplication':
+      correctAnswer = num1 * num2;
+      break;
+    case 'division':
+      correctAnswer = Math.floor(num1 / num2);
+      break;
+    case 'addition':
+      correctAnswer = num1 + num2;
+      break;
+    case 'subtraction':
+      correctAnswer = num1 - num2;
+      break;
+    default:
+      correctAnswer = 0;
+  }
+  
   const isCorrect = parseInt(userAnswer) === correctAnswer;
   
   let explanation = null;
