@@ -54,7 +54,9 @@ function generateAnswerOptions(correctAnswer) {
   // Generate 3 plausible wrong answers
   while (options.size < 4) {
     // Generate wrong answers within a reasonable range
-    const offset = Math.floor(Math.random() * 20) - 10 // -10 to +10
+    // Use percentage-based offset for larger numbers to keep options realistic
+    const range = Math.max(10, Math.floor(correctAnswer * 0.3))
+    const offset = Math.floor(Math.random() * (range * 2)) - range
     const wrongAnswer = correctAnswer + offset
     
     // Ensure wrong answer is positive and different from correct
