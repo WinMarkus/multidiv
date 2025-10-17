@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import Explanation from './Explanation.vue'
 import Celebration from './Celebration.vue'
 import HarryPotterAnimation from './HarryPotterAnimation.vue'
@@ -22,6 +22,9 @@ const showHPAnimation = ref(false)
 const hpAnimationType = ref('streak')
 const showJoke = ref(false)
 const questionsSinceLastJoke = ref(0)
+const useMultiselect = ref(false)
+const answerOptions = ref([])
+const answerInputRef = ref(null)
 
 const score = computed(() => {
   if (totalAttempts.value === 0) return 0
@@ -45,6 +48,27 @@ const problemDisplay = computed(() => {
   }
 })
 
+function generateAnswerOptions(correctAnswer) {
+  const options = new Set([correctAnswer])
+  
+  // Generate 3 plausible wrong answers
+  while (options.size < 4) {
+    // Generate wrong answers within a reasonable range
+    // Use percentage-based offset for larger numbers to keep options realistic
+    const range = Math.max(10, Math.floor(correctAnswer * 0.3))
+    const offset = Math.floor(Math.random() * (range * 2)) - range
+    const wrongAnswer = correctAnswer + offset
+    
+    // Ensure wrong answer is positive and different from correct
+    if (wrongAnswer > 0 && wrongAnswer !== correctAnswer) {
+      options.add(wrongAnswer)
+    }
+  }
+  
+  // Shuffle the options array
+  return Array.from(options).sort(() => Math.random() - 0.5)
+}
+
 async function fetchProblem() {
   try {
     const response = await fetch(`${API_URL}/api/problem?difficulty=${difficulty.value}&type=${problemType.value}`)
@@ -54,6 +78,20 @@ async function fetchProblem() {
     showExplanation.value = false
     explanation.value = null
     feedback.value = ''
+    
+    // Randomly decide between input and multiselect (30% chance for multiselect)
+    useMultiselect.value = Math.random() < 0.3
+    
+    if (useMultiselect.value) {
+      // Generate answer options for multiselect
+      answerOptions.value = generateAnswerOptions(data.answer)
+    }
+    
+    // Focus the input field after rendering
+    await nextTick()
+    if (answerInputRef.value) {
+      answerInputRef.value.focus()
+    }
   } catch (error) {
     console.error('Error fetching problem:', error)
   }
@@ -119,7 +157,7 @@ async function submitAnswer() {
           questionsSinceLastJoke.value = 0
           setTimeout(() => {
             showJoke.value = false
-          }, 6000) // Give 6 seconds to read and enjoy the joke
+          }, 12000) // Give 12 seconds to read and enjoy the joke (increased from 6)
         }, 2000)
       }
       
@@ -139,7 +177,7 @@ async function submitAnswer() {
           questionsSinceLastJoke.value = 0
           setTimeout(() => {
             showJoke.value = false
-          }, 6000)
+          }, 12000) // Give 12 seconds to read and enjoy the joke (increased from 6)
         }, 3000)
       }
     }
@@ -272,13 +310,33 @@ onMounted(() => {
       </div>
       
       <div class="flex flex-col items-center gap-4">
+        <!-- Standard Input Mode -->
         <input
+          v-if="!useMultiselect"
+          ref="answerInputRef"
           v-model="userAnswer"
           @keypress="handleKeyPress"
           type="number"
           placeholder="Enter your answer..."
           class="w-full max-w-md px-6 py-4 text-2xl text-center bg-white/10 border-2 border-hp-gold/50 rounded-lg text-hp-gold placeholder-hp-gold/30 focus:outline-none focus:ring-2 focus:ring-hp-gold focus:border-transparent backdrop-blur"
         />
+        
+        <!-- Multiselect Mode -->
+        <div v-else class="w-full max-w-md grid grid-cols-2 gap-3">
+          <button
+            v-for="option in answerOptions"
+            :key="option"
+            @click="userAnswer = option.toString()"
+            :class="[
+              'px-6 py-4 text-2xl text-center border-2 rounded-lg transition-all duration-300 font-hp font-bold',
+              userAnswer === option.toString()
+                ? 'bg-hp-gold text-hp-navy border-hp-gold scale-105 shadow-lg'
+                : 'bg-white/10 text-hp-gold border-hp-gold/50 hover:bg-white/20 hover:border-hp-gold hover:scale-102'
+            ]"
+          >
+            {{ option }}
+          </button>
+        </div>
         
         <button
           @click="submitAnswer"
