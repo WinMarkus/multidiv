@@ -4,6 +4,7 @@ import Explanation from './Explanation.vue'
 import Celebration from './Celebration.vue'
 import HarryPotterAnimation from './HarryPotterAnimation.vue'
 import JokeDisplay from './JokeDisplay.vue'
+import ChallengeMode from './ChallengeMode.vue'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -25,6 +26,7 @@ const questionsSinceLastJoke = ref(0)
 const useMultiselect = ref(false)
 const answerOptions = ref([])
 const answerInputRef = ref(null)
+const showChallengeMode = ref(false)
 
 const score = computed(() => {
   if (totalAttempts.value === 0) return 0
@@ -210,6 +212,14 @@ function handleKeyPress(event) {
 onMounted(() => {
   fetchProblem()
 })
+
+function openChallengeMode() {
+  showChallengeMode.value = true
+}
+
+function closeChallengeMode() {
+  showChallengeMode.value = false
+}
 </script>
 
 <template>
@@ -222,6 +232,16 @@ onMounted(() => {
       >
         🏰 Österreich Quiz
       </router-link>
+    </div>
+
+    <!-- Challenge Mode Button -->
+    <div class="absolute top-4 left-4">
+      <button
+        @click="openChallengeMode"
+        class="bg-hp-gold hover:bg-hp-bronze text-hp-navy font-hp font-bold px-6 py-3 rounded-lg transition-all duration-300 hover:scale-105 shadow-lg"
+      >
+        ⚡ Challenge Mode
+      </button>
     </div>
 
     <!-- Header -->
@@ -380,6 +400,12 @@ onMounted(() => {
     <!-- Joke Display -->
     <JokeDisplay
       v-if="showJoke"
+    />
+    
+    <!-- Challenge Mode -->
+    <ChallengeMode
+      v-if="showChallengeMode"
+      @close="closeChallengeMode"
     />
   </div>
 </template>
