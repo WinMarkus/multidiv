@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MathGame from '../components/MathGame.vue'
 import AustrianQuiz from '../components/AustrianQuiz.vue'
+import ShapesQuiz from '../components/ShapesQuiz.vue'
 
 const routes = [
   {
@@ -12,6 +13,11 @@ const routes = [
     path: '/austria-quiz',
     name: 'AustrianQuiz',
     component: AustrianQuiz
+  },
+  {
+    path: '/shapes-quiz',
+    name: 'ShapesQuiz',
+    component: ShapesQuiz
   }
 ]
 

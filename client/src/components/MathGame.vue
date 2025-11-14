@@ -225,12 +225,18 @@ function closeChallengeMode() {
 <template>
   <div class="container mx-auto px-4 py-8 min-h-screen flex flex-col items-center justify-center">
     <!-- Navigation -->
-    <div class="absolute top-4 right-4">
+    <div class="absolute top-4 right-4 flex gap-2">
       <router-link 
         to="/austria-quiz"
         class="bg-hp-burgundy hover:bg-hp-burgundy/80 text-hp-gold font-hp px-4 py-2 rounded-lg border-2 border-hp-gold/50 transition-all duration-300 hover:scale-105 shadow-lg"
       >
         🏰 Österreich Quiz
+      </router-link>
+      <router-link 
+        to="/shapes-quiz"
+        class="bg-hp-burgundy hover:bg-hp-burgundy/80 text-hp-gold font-hp px-4 py-2 rounded-lg border-2 border-hp-gold/50 transition-all duration-300 hover:scale-105 shadow-lg"
+      >
+        📐 Shapes Quiz
       </router-link>
     </div>
 
