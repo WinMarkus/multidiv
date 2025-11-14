@@ -51,9 +51,10 @@ function generateQuestion() {
   feedback.value = ''
 }
 
-function submitAnswer() {
-  if (!selectedAnswer.value || !currentQuestion.value) return
+function selectAndSubmitAnswer(option) {
+  if (showFeedback.value) return // Prevent clicking during feedback
   
+  selectedAnswer.value = option
   totalQuestions.value++
   
   if (selectedAnswer.value === currentQuestion.value.correctAnswer) {
@@ -141,26 +142,10 @@ onMounted(() => {
         <button
           v-for="option in currentQuestion.options"
           :key="option"
-          @click="selectedAnswer = option"
-          :class="[
-            'w-full px-6 py-4 text-xl font-hp rounded-lg border-2 transition-all duration-300 hover:scale-105',
-            selectedAnswer === option 
-              ? 'bg-hp-gold text-hp-navy border-hp-gold shadow-lg' 
-              : 'bg-white/10 text-hp-gold border-hp-gold/50 hover:bg-white/20'
-          ]"
+          @click="selectAndSubmitAnswer(option)"
+          class="w-full px-6 py-4 text-xl font-hp rounded-lg border-2 transition-all duration-300 hover:scale-105 bg-white/10 text-hp-gold border-hp-gold/50 hover:bg-hp-gold/20 active:bg-hp-gold active:text-hp-navy"
         >
           {{ option }}
-        </button>
-      </div>
-      
-      <!-- Submit Button -->
-      <div v-if="!showFeedback" class="text-center">
-        <button
-          @click="submitAnswer"
-          :disabled="!selectedAnswer"
-          class="bg-hp-gold hover:bg-hp-bronze text-hp-navy font-hp font-bold px-8 py-4 rounded-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg text-xl"
-        >
-          Antwort bestätigen ✨
         </button>
       </div>
       

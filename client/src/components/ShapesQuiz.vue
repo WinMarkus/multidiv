@@ -1,24 +1,39 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import Shape2D from './Shape2D.vue'
+import Shape3D from './Shape3D.vue'
 
 const questions = [
-  // 2D Shapes
+  // Visual 2D Shape Identification
+  { question: 'What shape is this?', answer: 'Triangle', type: '2D-visual', shape: 'triangle', options: ['Square', 'Triangle', 'Circle', 'Pentagon'] },
+  { question: 'What shape is this?', answer: 'Square', type: '2D-visual', shape: 'square', options: ['Rectangle', 'Square', 'Rhombus', 'Trapezoid'] },
+  { question: 'What shape is this?', answer: 'Circle', type: '2D-visual', shape: 'circle', options: ['Oval', 'Circle', 'Sphere', 'Pentagon'] },
+  { question: 'What shape is this?', answer: 'Pentagon', type: '2D-visual', shape: 'pentagon', options: ['Hexagon', 'Pentagon', 'Octagon', 'Square'] },
+  { question: 'What shape is this?', answer: 'Hexagon', type: '2D-visual', shape: 'hexagon', options: ['Pentagon', 'Hexagon', 'Octagon', 'Heptagon'] },
+  { question: 'What shape is this?', answer: 'Octagon', type: '2D-visual', shape: 'octagon', options: ['Hexagon', 'Heptagon', 'Octagon', 'Pentagon'] },
+  { question: 'What shape is this?', answer: 'Rectangle', type: '2D-visual', shape: 'rectangle', options: ['Square', 'Rectangle', 'Parallelogram', 'Trapezoid'] },
+  { question: 'What shape is this?', answer: 'Rhombus', type: '2D-visual', shape: 'rhombus', options: ['Square', 'Rectangle', 'Rhombus', 'Kite'] },
+  
+  // Visual 3D Shape Identification
+  { question: 'What 3D shape is this? (Drag to rotate!)', answer: 'Cube', type: '3D-visual', shape: 'cube', options: ['Cube', 'Pyramid', 'Sphere', 'Cylinder'] },
+  { question: 'What 3D shape is this? (Drag to rotate!)', answer: 'Sphere', type: '3D-visual', shape: 'sphere', options: ['Cube', 'Sphere', 'Cylinder', 'Cone'] },
+  { question: 'What 3D shape is this? (Drag to rotate!)', answer: 'Cylinder', type: '3D-visual', shape: 'cylinder', options: ['Cone', 'Cylinder', 'Sphere', 'Cube'] },
+  { question: 'What 3D shape is this? (Drag to rotate!)', answer: 'Cone', type: '3D-visual', shape: 'cone', options: ['Pyramid', 'Cone', 'Cylinder', 'Sphere'] },
+  { question: 'What 3D shape is this? (Drag to rotate!)', answer: 'Pyramid', type: '3D-visual', shape: 'pyramid', options: ['Cone', 'Pyramid', 'Cube', 'Prism'] },
+  
+  // 2D Shapes - Text Questions
   { question: 'How many sides does a triangle have?', answer: '3', type: '2D', options: ['2', '3', '4', '5'] },
   { question: 'How many sides does a square have?', answer: '4', type: '2D', options: ['3', '4', '5', '6'] },
   { question: 'How many sides does a pentagon have?', answer: '5', type: '2D', options: ['4', '5', '6', '7'] },
   { question: 'How many sides does a hexagon have?', answer: '6', type: '2D', options: ['5', '6', '7', '8'] },
   { question: 'How many sides does an octagon have?', answer: '8', type: '2D', options: ['6', '7', '8', '9'] },
-  { question: 'How many sides does a circle have?', answer: '0', type: '2D', options: ['0', '1', 'infinite', '100'] },
   { question: 'A shape with 4 equal sides and 4 right angles is a...', answer: 'Square', type: '2D', options: ['Rectangle', 'Square', 'Rhombus', 'Trapezoid'] },
-  { question: 'A shape with 4 sides where opposite sides are equal is a...', answer: 'Rectangle', type: '2D', options: ['Square', 'Rectangle', 'Triangle', 'Pentagon'] },
   
-  // 3D Shapes
+  // 3D Shapes - Text Questions
   { question: 'How many faces does a cube have?', answer: '6', type: '3D', options: ['4', '5', '6', '8'] },
   { question: 'How many faces does a pyramid have?', answer: '5', type: '3D', options: ['4', '5', '6', '7'] },
   { question: 'How many edges does a cube have?', answer: '12', type: '3D', options: ['8', '10', '12', '14'] },
   { question: 'How many vertices does a cube have?', answer: '8', type: '3D', options: ['6', '8', '10', '12'] },
-  { question: 'A 3D shape with all points equidistant from center is a...', answer: 'Sphere', type: '3D', options: ['Cube', 'Sphere', 'Cylinder', 'Cone'] },
-  { question: 'A 3D shape with 2 circular faces and 1 curved surface is a...', answer: 'Cylinder', type: '3D', options: ['Cone', 'Cylinder', 'Sphere', 'Prism'] },
   
   // Geometry concepts
   { question: 'How many degrees in a right angle?', answer: '90', type: 'angles', options: ['45', '90', '180', '360'] },
@@ -47,10 +62,25 @@ const questionTypeEmoji = computed(() => {
   if (!currentQuestion.value) return '📐'
   switch (currentQuestion.value.type) {
     case '2D': return '⬜'
+    case '2D-visual': return '👁️'
     case '3D': return '🧊'
+    case '3D-visual': return '🎮'
     case 'angles': return '📐'
     case 'geometry': return '📏'
     default: return '📐'
+  }
+})
+
+const questionTypeLabel = computed(() => {
+  if (!currentQuestion.value) return 'Geometry'
+  switch (currentQuestion.value.type) {
+    case '2D': return '2D Shapes'
+    case '2D-visual': return 'Visual 2D'
+    case '3D': return '3D Shapes'
+    case '3D-visual': return 'Interactive 3D'
+    case 'angles': return 'Angles'
+    case 'geometry': return 'Geometry'
+    default: return 'Geometry'
   }
 })
 
@@ -63,9 +93,10 @@ function generateQuestion() {
   feedback.value = ''
 }
 
-function submitAnswer() {
-  if (!selectedAnswer.value || !currentQuestion.value) return
+function selectAndSubmitAnswer(option) {
+  if (showFeedback.value) return // Prevent clicking during feedback
   
+  selectedAnswer.value = option
   totalQuestions.value++
   
   if (selectedAnswer.value === currentQuestion.value.answer) {
@@ -141,11 +172,7 @@ onMounted(() => {
       <div class="text-center mb-6">
         <div class="inline-block bg-hp-navy/50 px-6 py-2 rounded-lg border border-hp-gold/30">
           <p class="text-hp-gold/70 text-sm mb-1">Geometry Challenge {{ questionTypeEmoji }}</p>
-          <p class="text-sm text-hp-gold/60">
-            {{ currentQuestion?.type === '2D' ? '2D Shapes' : 
-               currentQuestion?.type === '3D' ? '3D Shapes' : 
-               currentQuestion?.type === 'angles' ? 'Angles' : 'Geometry' }}
-          </p>
+          <p class="text-sm text-hp-gold/60">{{ questionTypeLabel }}</p>
         </div>
       </div>
       
@@ -153,6 +180,16 @@ onMounted(() => {
         <p class="text-3xl font-hp text-hp-gold mb-6 drop-shadow-lg">
           {{ currentQuestion.question }}
         </p>
+        
+        <!-- Visual 2D Shape -->
+        <div v-if="currentQuestion.type === '2D-visual'" class="flex justify-center mb-6">
+          <Shape2D :shape="currentQuestion.shape" :size="200" />
+        </div>
+        
+        <!-- Interactive 3D Shape -->
+        <div v-if="currentQuestion.type === '3D-visual'" class="mb-6 max-w-lg mx-auto">
+          <Shape3D :shape="currentQuestion.shape" />
+        </div>
       </div>
       
       <!-- Answer Options -->
@@ -160,26 +197,10 @@ onMounted(() => {
         <button
           v-for="option in currentQuestion.options"
           :key="option"
-          @click="selectedAnswer = option"
-          :class="[
-            'w-full px-6 py-4 text-xl font-hp rounded-lg border-2 transition-all duration-300 hover:scale-105',
-            selectedAnswer === option 
-              ? 'bg-hp-gold text-hp-navy border-hp-gold shadow-lg' 
-              : 'bg-white/10 text-hp-gold border-hp-gold/50 hover:bg-white/20'
-          ]"
+          @click="selectAndSubmitAnswer(option)"
+          class="w-full px-6 py-4 text-xl font-hp rounded-lg border-2 transition-all duration-300 hover:scale-105 bg-white/10 text-hp-gold border-hp-gold/50 hover:bg-hp-gold/20 active:bg-hp-gold active:text-hp-navy"
         >
           {{ option }}
-        </button>
-      </div>
-      
-      <!-- Submit Button -->
-      <div v-if="!showFeedback" class="text-center">
-        <button
-          @click="submitAnswer"
-          :disabled="!selectedAnswer"
-          class="bg-hp-gold hover:bg-hp-bronze text-hp-navy font-hp font-bold px-8 py-4 rounded-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg text-xl"
-        >
-          Submit Answer ✨
         </button>
       </div>
       
