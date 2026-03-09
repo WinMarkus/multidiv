@@ -23,34 +23,26 @@ const emit = defineEmits(['close'])
       <div class="bg-white/10 rounded-lg p-6 backdrop-blur">
         <p class="text-xl text-hp-gold mb-4 font-hp">{{ explanation.explanation }}</p>
         
-        <div v-if="problemType === 'multiplication'" class="space-y-3">
+        <div class="space-y-3">
           <div v-for="(step, index) in explanation.steps" :key="index" class="bg-hp-burgundy/30 p-4 rounded-lg border border-hp-gold/30">
-            <p class="text-lg text-white">{{ step.description }}</p>
+            <p class="text-lg text-white">Step {{ index + 1 }}: {{ step.description }}</p>
           </div>
-          
+
           <div class="border-t-2 border-hp-gold/50 pt-4 mt-4">
-            <p class="text-xl text-hp-gold font-bold">
+            <p v-if="problemType === 'multiplication'" class="text-xl text-hp-gold font-bold">
               Total: {{ explanation.total }}
             </p>
-          </div>
-        </div>
-        
-        <div v-else class="space-y-3">
-          <div v-for="(step, index) in explanation.steps" :key="index" class="bg-hp-burgundy/30 p-4 rounded-lg border border-hp-gold/30">
-            <p class="text-lg text-white mb-2">Step {{ index + 1 }}: {{ step.description }}</p>
-            <div class="pl-4 text-white/80">
-              <p>Working number: {{ step.working }}</p>
-              <p>Subtract: {{ step.subtract }}</p>
-              <p>Remainder: {{ step.remainder }}</p>
-            </div>
-          </div>
-          
-          <div class="border-t-2 border-hp-gold/50 pt-4 mt-4">
-            <p class="text-xl text-hp-gold font-bold">
+            <p v-else-if="problemType === 'division'" class="text-xl text-hp-gold font-bold">
               Answer: {{ explanation.quotient }}
               <span v-if="explanation.remainder > 0" class="text-lg">
                 (Remainder: {{ explanation.remainder }})
               </span>
+            </p>
+            <p v-else-if="problemType === 'addition' || problemType === 'subtraction'" class="text-xl text-hp-gold font-bold">
+              Answer: {{ explanation.result }}
+            </p>
+            <p v-else-if="problemType === 'probability'" class="text-xl text-hp-gold font-bold">
+              Probability: {{ explanation.percent }}%
             </p>
           </div>
         </div>

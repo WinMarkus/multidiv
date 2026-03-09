@@ -45,6 +45,8 @@ const problemDisplay = computed(() => {
       return `${num1} + ${num2}`
     case 'subtraction':
       return `${num1} - ${num2}`
+    case 'probability':
+      return `If ${num1} out of ${num2} outcomes happen, what is the probability (%)?`
     default:
       return ''
   }
@@ -190,7 +192,7 @@ async function submitAnswer() {
 
 function toggleProblemType() {
   // Cycle through all four problem types
-  const types = ['multiplication', 'division', 'addition', 'subtraction']
+  const types = ['multiplication', 'division', 'addition', 'subtraction', 'probability']
   const currentIndex = types.indexOf(problemType.value)
   const nextIndex = (currentIndex + 1) % types.length
   problemType.value = types[nextIndex]
@@ -324,7 +326,7 @@ function closeChallengeMode() {
             {{ problemType === 'multiplication' ? 'Multiplication Spell' : 
                problemType === 'division' ? 'Division Charm' : 
                problemType === 'addition' ? 'Addition Enchantment' : 
-               'Subtraction Sorcery' }}
+               problemType === 'subtraction' ? 'Subtraction Sorcery' : 'Probability Potion' }}
           </p>
         </div>
       </div>

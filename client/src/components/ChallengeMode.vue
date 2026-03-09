@@ -40,6 +40,8 @@ const problemDisplay = computed(() => {
       return `${num1} + ${num2}`
     case 'subtraction':
       return `${num1} - ${num2}`
+    case 'probability':
+      return `If ${num1} out of ${num2} outcomes happen, what is the probability (%)?`
     default:
       return ''
   }
@@ -258,6 +260,7 @@ onUnmounted(() => {
             <option value="division">Division</option>
             <option value="addition">Addition</option>
             <option value="subtraction">Subtraction</option>
+            <option value="probability">Probability</option>
           </select>
         </div>
       </div>
@@ -302,7 +305,7 @@ onUnmounted(() => {
             {{ problemType === 'multiplication' ? 'Multiplication Spell' : 
                problemType === 'division' ? 'Division Charm' : 
                problemType === 'addition' ? 'Addition Enchantment' : 
-               'Subtraction Sorcery' }}
+               problemType === 'subtraction' ? 'Subtraction Sorcery' : 'Probability Potion' }}
           </p>
         </div>
         

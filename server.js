@@ -112,6 +112,12 @@ function generateProblem(difficulty, type) {
     }
     
     answer = num1 - num2;
+  } else if (type === 'probability') {
+    // Probability for younger learners: whole-number percentages only
+    const totalOptions = [2, 4, 5, 10, 20];
+    num2 = totalOptions[Math.floor(Math.random() * totalOptions.length)];
+    num1 = Math.floor(Math.random() * num2) + 1; // favorable outcomes
+    answer = Math.round((num1 / num2) * 100);
   }
   
   return { num1, num2, answer, type };
@@ -256,6 +262,20 @@ function generateExplanation(num1, num2, type) {
       result: parseInt(result),
       explanation: `Subtracting ${num2} from ${num1} step by step:`
     };
+  } else if (type === 'probability') {
+    const percent = Math.round((num1 / num2) * 100);
+
+    return {
+      steps: [
+        { description: `Favorable outcomes: ${num1}` },
+        { description: `Total possible outcomes: ${num2}` },
+        { description: `Write it as a fraction: ${num1}/${num2}` },
+        { description: `Convert to percent: ${num1} ÷ ${num2} = ${num1 / num2}` },
+        { description: `${num1 / num2} × 100 = ${percent}%` }
+      ],
+      percent,
+      explanation: `Let's find the probability as a percent:`
+    };
   }
 }
 
@@ -284,6 +304,9 @@ app.post('/api/check', (req, res) => {
       break;
     case 'subtraction':
       correctAnswer = num1 - num2;
+      break;
+    case 'probability':
+      correctAnswer = Math.round((num1 / num2) * 100);
       break;
     default:
       correctAnswer = 0;
