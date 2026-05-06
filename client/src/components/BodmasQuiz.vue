@@ -4,16 +4,7 @@ import { ref, computed, watch } from 'vue'
 // ─── difficulty ───────────────────────────────────────────────────────────────
 const difficulty = ref(1)
 
-// ─── formula generation ───────────────────────────────────────────────────────
-
-/**
- * A "segment" is one independently-evaluable chunk of the expression.
- * It carries:
- *   - tokens : string[]   raw tokens that make up this chunk (for display)
- *   - value  : number     the numeric result of evaluating those tokens
- *   - type   : string     label used for the colour highlight ('brackets'|'orders'|'divmul'|'addsub')
- */
-
+// ─── helpers ──────────────────────────────────────────────────────────────────
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
@@ -22,393 +13,343 @@ function randOp(ops) {
   return ops[Math.floor(Math.random() * ops.length)]
 }
 
+// Round to avoid floating-point noise (3 decimal places is plenty for these sums)
+function round(n) {
+  return Math.round(n * 1000) / 1000
+}
+
+// ─── formula generation ───────────────────────────────────────────────────────
 /**
- * Evaluate a flat list of tokens like ['3', '+', '4', '*', '2']
- * following standard operator precedence (no brackets here – brackets are
- * pre-evaluated by the step system).
+ * A Step describes the state of the formula at a particular BODMAS stage.
+ *   tokens       : Array<{text, segment}>  – every display token with its colour group
+ *   activeSegment: string                  – which BODMAS group the user must solve now
+ *   expectedAnswer: number                 – what we expect the user to type
+ *   hint         : string                  – short "solve X OP Y" label shown below
+ *
+ * Instead of tracking absolute token indices across mutations, we pre-compute
+ * a fresh token snapshot for every step.  This is simpler, correct, and easy
+ * to maintain.
  */
-function evalTokens(tokens) {
-  // copy so we can mutate
-  let toks = [...tokens]
 
-  // pass 1: exponentiation (^)
-  let i = 1
-  while (i < toks.length) {
-    if (toks[i] === '^') {
-      const result = Math.pow(Number(toks[i - 1]), Number(toks[i + 1]))
-      toks.splice(i - 1, 3, String(result))
-    } else {
-      i += 2
-    }
-  }
-
-  // pass 2: × and ÷
-  i = 1
-  while (i < toks.length) {
-    if (toks[i] === '×' || toks[i] === '÷') {
-      const a = Number(toks[i - 1])
-      const b = Number(toks[i + 1])
-      const result = toks[i] === '×' ? a * b : a / b
-      toks.splice(i - 1, 3, String(Math.round(result * 1000) / 1000))
-    } else {
-      i += 2
-    }
-  }
-
-  // pass 3: + and -
-  i = 1
-  while (i < toks.length) {
-    if (toks[i] === '+' || toks[i] === '-') {
-      const result = Number(toks[i - 1]) + (toks[i] === '+' ? 1 : -1) * Number(toks[i + 1])
-      toks.splice(i - 1, 3, String(Math.round(result * 1000) / 1000))
-    } else {
-      i += 2
-    }
-  }
-
-  return Number(toks[0])
+function tok(text, segment) {
+  return { text: String(text), segment }
 }
 
 /**
- * Generate a formula appropriate for the difficulty level.
+ * Build all steps for a formula without Orders (difficulty 1-2):
  *
- * Returns { displayTokens, segments, answer }
- *   displayTokens : string[]    – the full expression token list for rendering
- *   segments      : Segment[]   – ordered list of steps the user must solve
- *   answer        : number      – final numeric answer
+ *   ( a OP1 b ) OP2 c OP3 e
+ *
+ * Step 1 – Brackets : solve  a OP1 b → R1
+ * Step 2 – DivMul  : solve  R1 OP2 c → R2
+ * Step 3 – AddSub  : solve  R2 OP3 e → R3  (final answer)
  */
-function generateFormula(diff) {
-  // scale numbers with difficulty
-  const maxN = diff <= 2 ? 9 : diff <= 5 ? 20 : 50
+function buildStepsSimple(diff) {
+  const maxN = diff <= 2 ? 9 : 20
 
-  // ── build a bracket sub-expression ────────────────────────────────────────
-  const a = randInt(1, maxN)
-  const b = randInt(1, maxN)
-  const bracketOp = randOp(['+', '-'])
-  const bracketTokens = ['(', String(a), bracketOp, String(b), ')']
-  const bracketValue = evalTokens([String(a), bracketOp, String(b)])
+  // Retry iteratively to avoid unbounded recursion on degenerate cases
+  for (let attempt = 0; attempt < 20; attempt++) {
+    // brackets
+    const a   = randInt(1, maxN)
+    const b   = randInt(1, maxN)
+    const op1 = randOp(['+', '-'])
+    const R1  = round(op1 === '+' ? a + b : a - b)
+    if (R1 <= 0) continue
 
-  // ── optionally add an exponent (orders) for diff >= 3 ─────────────────────
-  let ordersTokens = null
-  let ordersValue = null
-  const useOrders = diff >= 3
+    // DivMul – ensure clean integer result when dividing
+    const op2 = randOp(['×', '÷'])
+    let c, R2
+    if (op2 === '÷') {
+      c = randInt(2, 5)
+      if (R1 % c !== 0) continue
+      R2 = round(R1 / c)
+    } else {
+      c  = randInt(2, diff <= 2 ? 9 : maxN)
+      R2 = round(R1 * c)
+    }
 
-  // pick a small base and exponent so numbers stay manageable
-  if (useOrders) {
+    const op3 = randOp(['+', '-'])
+    const e   = randInt(1, maxN)
+    const R3  = round(op3 === '+' ? R2 + e : R2 - e)
+
+    const allSegments = ['brackets', 'divmul', 'addsub']
+
+    const step1Tokens = [
+      tok('(', 'brackets'), tok(a, 'brackets'), tok(op1, 'brackets'),
+      tok(b, 'brackets'),   tok(')', 'brackets'),
+      tok(op2, 'divmul'),   tok(c, 'divmul'),
+      tok(op3, 'addsub'),   tok(e, 'addsub'),
+    ]
+
+    const step2Tokens = [
+      tok(R1, 'divmul'), tok(op2, 'divmul'), tok(c, 'divmul'),
+      tok(op3, 'addsub'), tok(e, 'addsub'),
+    ]
+
+    const step3Tokens = [
+      tok(R2, 'addsub'), tok(op3, 'addsub'), tok(e, 'addsub'),
+    ]
+
+    return {
+      segments: allSegments,
+      steps: [
+        { tokens: step1Tokens, activeSegment: 'brackets', expectedAnswer: R1,
+          hint: `${a} ${op1} ${b}` },
+        { tokens: step2Tokens, activeSegment: 'divmul',   expectedAnswer: R2,
+          hint: `${R1} ${op2} ${c}` },
+        { tokens: step3Tokens, activeSegment: 'addsub',   expectedAnswer: R3,
+          hint: `${R2} ${op3} ${e}` },
+      ],
+      answer: R3,
+    }
+  }
+
+  // Fallback: guaranteed-valid formula (2 + 3) × 4 + 1 = 21
+  return {
+    segments: ['brackets', 'divmul', 'addsub'],
+    steps: [
+      { tokens: [tok('(','brackets'),tok(2,'brackets'),tok('+','brackets'),tok(3,'brackets'),tok(')','brackets'),tok('×','divmul'),tok(4,'divmul'),tok('+','addsub'),tok(1,'addsub')],
+        activeSegment: 'brackets', expectedAnswer: 5, hint: '2 + 3' },
+      { tokens: [tok(5,'divmul'),tok('×','divmul'),tok(4,'divmul'),tok('+','addsub'),tok(1,'addsub')],
+        activeSegment: 'divmul', expectedAnswer: 20, hint: '5 × 4' },
+      { tokens: [tok(20,'addsub'),tok('+','addsub'),tok(1,'addsub')],
+        activeSegment: 'addsub', expectedAnswer: 21, hint: '20 + 1' },
+    ],
+    answer: 21,
+  }
+}
+
+/**
+ * Build all steps for a formula with Orders (difficulty 3+):
+ *
+ *   ( a OP1 b ) OP2 base^exp OP3 e
+ *
+ * Step 1 – Brackets : solve  a OP1 b → R1
+ * Step 2 – Orders   : solve  base^exp → R2
+ * Step 3 – DivMul   : solve  R1 OP2 R2 → R3
+ * Step 4 – AddSub   : solve  R3 OP3 e  → R4  (final answer)
+ */
+function buildStepsWithOrders(diff) {
+  const maxN  = diff <= 5 ? 20 : 50
+
+  for (let attempt = 0; attempt < 20; attempt++) {
+    // brackets
+    const a   = randInt(1, maxN)
+    const b   = randInt(1, maxN)
+    const op1 = randOp(['+', '-'])
+    const R1  = round(op1 === '+' ? a + b : a - b)
+    if (R1 <= 0) continue
+
+    // orders
     const base = randInt(2, diff <= 5 ? 4 : 6)
     const exp  = randInt(2, 3)
-    ordersTokens = [String(base), '^', String(exp)]
-    ordersValue  = Math.pow(base, exp)
+    const R2   = Math.pow(base, exp)
+
+    // DivMul between R1 and R2
+    const op2 = randOp(['×', '÷'])
+    let R3
+    if (op2 === '÷') {
+      if (R1 % R2 !== 0) continue
+      R3 = round(R1 / R2)
+    } else {
+      R3 = round(R1 * R2)
+    }
+
+    // add/sub tail
+    const op3 = randOp(['+', '-'])
+    const e   = randInt(1, maxN)
+    const R4  = round(op3 === '+' ? R3 + e : R3 - e)
+
+    const allSegments = ['brackets', 'orders', 'divmul', 'addsub']
+
+    const step1Tokens = [
+      tok('(', 'brackets'),   tok(a, 'brackets'),   tok(op1, 'brackets'),
+      tok(b, 'brackets'),     tok(')', 'brackets'),
+      tok(op2, 'divmul'),
+      tok(base, 'orders'),    tok('^', 'orders'),    tok(exp, 'orders'),
+      tok(op3, 'addsub'),     tok(e, 'addsub'),
+    ]
+
+    const step2Tokens = [
+      tok(R1, 'divmul'),
+      tok(op2, 'divmul'),
+      tok(base, 'orders'),  tok('^', 'orders'),  tok(exp, 'orders'),
+      tok(op3, 'addsub'),   tok(e, 'addsub'),
+    ]
+
+    const step3Tokens = [
+      tok(R1, 'divmul'),    tok(op2, 'divmul'),  tok(R2, 'divmul'),
+      tok(op3, 'addsub'),   tok(e, 'addsub'),
+    ]
+
+    const step4Tokens = [
+      tok(R3, 'addsub'),    tok(op3, 'addsub'),  tok(e, 'addsub'),
+    ]
+
+    return {
+      segments: allSegments,
+      steps: [
+        { tokens: step1Tokens, activeSegment: 'brackets', expectedAnswer: R1,
+          hint: `${a} ${op1} ${b}` },
+        { tokens: step2Tokens, activeSegment: 'orders',   expectedAnswer: R2,
+          hint: `${base} ^ ${exp}` },
+        { tokens: step3Tokens, activeSegment: 'divmul',   expectedAnswer: R3,
+          hint: `${R1} ${op2} ${R2}` },
+        { tokens: step4Tokens, activeSegment: 'addsub',   expectedAnswer: R4,
+          hint: `${R3} ${op3} ${e}` },
+      ],
+      answer: R4,
+    }
   }
 
-  // ── build a multiply/divide pair ───────────────────────────────────────────
-  const c  = diff >= 4 ? randInt(2, maxN) : randInt(2, 9)
-  // for division, ensure clean integer result
-  const d  = diff >= 4 ? randInt(2, 9) : randInt(2, 5)
-  const mulDiv = useOrders ? '×' : randOp(['×', '÷'])
-  // if dividing use c*d so result is integer
-  let mulDivTokens, mulDivValue
-  if (mulDiv === '÷') {
-    mulDivTokens = [String(c * d), '÷', String(d)]
-    mulDivValue  = c
-  } else {
-    mulDivTokens = [String(c), '×', String(d)]
-    mulDivValue  = c * d
+  // Fallback: (3 + 4) × 2^3 + 1 = 57
+  return {
+    segments: ['brackets', 'orders', 'divmul', 'addsub'],
+    steps: [
+      { tokens: [tok('(','brackets'),tok(3,'brackets'),tok('+','brackets'),tok(4,'brackets'),tok(')','brackets'),tok('×','divmul'),tok(2,'orders'),tok('^','orders'),tok(3,'orders'),tok('+','addsub'),tok(1,'addsub')],
+        activeSegment: 'brackets', expectedAnswer: 7, hint: '3 + 4' },
+      { tokens: [tok(7,'divmul'),tok('×','divmul'),tok(2,'orders'),tok('^','orders'),tok(3,'orders'),tok('+','addsub'),tok(1,'addsub')],
+        activeSegment: 'orders', expectedAnswer: 8, hint: '2 ^ 3' },
+      { tokens: [tok(7,'divmul'),tok('×','divmul'),tok(8,'divmul'),tok('+','addsub'),tok(1,'addsub')],
+        activeSegment: 'divmul', expectedAnswer: 56, hint: '7 × 8' },
+      { tokens: [tok(56,'addsub'),tok('+','addsub'),tok(1,'addsub')],
+        activeSegment: 'addsub', expectedAnswer: 57, hint: '56 + 1' },
+    ],
+    answer: 57,
   }
+}
 
-  // ── addition / subtraction tail ────────────────────────────────────────────
-  const e      = randInt(1, maxN)
-  const addOp  = randOp(['+', '-'])
-
-  // ── assemble full token list ───────────────────────────────────────────────
-  // Pattern (diff < 3):  (a op b) × c + e
-  // Pattern (diff >= 3): (a op b) × c^exp + e   (orders appear as separate segment)
-  let displayTokens = []
-  const segments = []
-
-  // Segment 0: brackets
-  displayTokens.push(...bracketTokens)
-  segments.push({
-    indices: [...Array(bracketTokens.length).keys()],  // positions 0..4
-    tokens:  bracketTokens,
-    value:   bracketValue,
-    type:    'brackets',
-    label:   'Brackets',
-    emoji:   '🔵',
-  })
-
-  // connect bracket result to the rest with ×
-  displayTokens.push('×')
-
-  if (useOrders) {
-    // Segment 1: orders (e.g. 3^2)
-    const ordersStart = displayTokens.length
-    displayTokens.push(...ordersTokens)
-    segments.push({
-      indices: [ordersStart, ordersStart + 1, ordersStart + 2],
-      tokens:  ordersTokens,
-      value:   ordersValue,
-      type:    'orders',
-      label:   'Orders (Powers)',
-      emoji:   '🟡',
-    })
-
-    // Segment 2: the bracket × orders result – both already computed above
-    // We'll handle this implicitly: after solving brackets and orders, the
-    // product is a new ÷/× segment that the system resolves automatically.
-    // For simplicity we add a separate division/multiplication segment.
-    displayTokens.push('+', ...mulDivTokens)
-    // mulDiv segment uses the tokens that appear literally
-    const mulStart = displayTokens.indexOf(mulDivTokens[0], ordersStart + 3 + 1)
-    segments.push({
-      indices: [mulStart, mulStart + 1, mulStart + 2],
-      tokens:  mulDivTokens,
-      value:   mulDivValue,
-      type:    'divmul',
-      label:   'Division / Multiplication',
-      emoji:   '🟠',
-    })
-
-    // final add/sub with e
-    const eIdx = displayTokens.length
-    displayTokens.push(addOp, String(e))
-    const addStart = eIdx
-    segments.push({
-      indices: [addStart, addStart + 1],
-      tokens:  [addOp, String(e)],
-      // value is evaluated at the end after prior segments resolved
-      value:   null, // computed lazily
-      type:    'addsub',
-      label:   'Addition / Subtraction',
-      emoji:   '🟢',
-    })
-  } else {
-    // Segment 1: multiply/divide
-    const mulStart = displayTokens.length
-    displayTokens.push(...mulDivTokens)
-    segments.push({
-      indices: [mulStart, mulStart + 1, mulStart + 2],
-      tokens:  mulDivTokens,
-      value:   mulDivValue,
-      type:    'divmul',
-      label:   'Division / Multiplication',
-      emoji:   '🟠',
-    })
-
-    // Segment 2: add/sub
-    const addStart = displayTokens.length
-    displayTokens.push(addOp, String(e))
-    segments.push({
-      indices: [addStart, addStart + 1],
-      tokens:  [addOp, String(e)],
-      value:   null,
-      type:    'addsub',
-      label:   'Addition / Subtraction',
-      emoji:   '🟢',
-    })
-  }
-
-  // compute the final answer by evaluating the full expression
-  const flatForEval = displayTokens.filter(t => t !== '(' && t !== ')')
-  const answer = evalTokens(flatForEval)
-
-  // for the addsub segment, just store the operator+operand; value computed after prior
-  // steps resolved – we'll do it interactively.
-
-  return { displayTokens, segments, answer: Math.round(answer * 1000) / 1000 }
+function generateFormula(diff) {
+  return diff >= 3 ? buildStepsWithOrders(diff) : buildStepsSimple(diff)
 }
 
 // ─── state ────────────────────────────────────────────────────────────────────
-
-const formula    = ref(null)      // { displayTokens, segments, answer }
-const stepIndex  = ref(0)         // which segment the user is currently working on
-const resolvedTokens = ref([])    // copy of displayTokens with solved parts replaced
-const hoveredType = ref(null)     // for hover-highlight mode
-const selectedSegIdx = ref(null)  // for click mode
-const userInput  = ref('')
-const feedback   = ref('')        // 'correct' | 'wrong' | ''
-const wrongGuess = ref('')
-const finished   = ref(false)
-const score      = ref(0)
-const totalPlayed = ref(0)
-const streak     = ref(0)
+const formula       = ref(null)   // { segments, steps, answer }
+const stepIndex     = ref(0)
+const hoveredSeg    = ref(null)   // segment type string, for hover-highlight
+const selectedSeg   = ref(null)   // segment type string, for click mode
+const userInput     = ref('')
+const feedback      = ref('')     // 'correct' | 'wrong' | ''
+const wrongGuess    = ref('')
+const finished      = ref(false)
+const score         = ref(0)
+const totalPlayed   = ref(0)
+const streak        = ref(0)
 
 // ─── computed ─────────────────────────────────────────────────────────────────
-
 const isLowDifficulty = computed(() => difficulty.value <= 3)
 
-const currentSegment = computed(() => {
-  if (!formula.value) return null
-  return formula.value.segments[stepIndex.value] ?? null
-})
+const currentStep = computed(() => formula.value?.steps[stepIndex.value] ?? null)
 
-/**
- * Build a rich token list for rendering, annotating each token with its
- * segment membership and whether it's the active/hovered segment.
- */
-const richTokens = computed(() => {
+const SEGMENT_META = {
+  brackets: { label: 'Brackets',                emoji: '🔵',
+    colour: 'text-blue-300   bg-blue-900/50   border-blue-400',
+    hover:  'bg-blue-700/70  scale-110 border-current' },
+  orders:   { label: 'Orders (Powers)',          emoji: '🟡',
+    colour: 'text-yellow-300 bg-yellow-900/50 border-yellow-400',
+    hover:  'bg-yellow-700/70 scale-110 border-current' },
+  divmul:   { label: 'Division / Multiplication',emoji: '🟠',
+    colour: 'text-orange-300 bg-orange-900/50 border-orange-400',
+    hover:  'bg-orange-700/70 scale-110 border-current' },
+  addsub:   { label: 'Addition / Subtraction',   emoji: '🟢',
+    colour: 'text-green-300  bg-green-900/50  border-green-400',
+    hover:  'bg-green-700/70  scale-110 border-current' },
+}
+
+function tokenClass(t) {
+  const step = currentStep.value
+  if (!t.segment || !step) return 'text-hp-gold font-mono font-bold text-2xl'
+
+  const meta = SEGMENT_META[t.segment]
+  const base = 'rounded px-1 py-0.5 border transition-all duration-150 font-mono font-bold text-2xl'
+  const isActive  = t.segment === step.activeSegment
+  const isHovered = isLowDifficulty.value && t.segment === hoveredSeg.value
+  const isClicked = !isLowDifficulty.value && t.segment === selectedSeg.value && isActive
+
+  if (!isActive) return `${base} ${meta.colour} opacity-30 border-transparent cursor-default`
+  if (isHovered || isClicked) return `${base} ${meta.colour} ${meta.hover}`
+  return `${base} ${meta.colour} border-transparent ${!isLowDifficulty.value ? 'cursor-pointer hover:border-current' : 'cursor-default'}`
+}
+
+const legend = computed(() => {
   if (!formula.value) return []
-  const toks = resolvedTokens.value
-  return toks.map((tok, idx) => {
-    // find which segment owns this index
-    const seg = formula.value.segments.find(s => s.indices.includes(idx))
-    const segIdx = formula.value.segments.indexOf(seg)
-    const isDone  = segIdx < stepIndex.value
-    const isCurrent = segIdx === stepIndex.value
-    const isHovered = isLowDifficulty.value && seg && seg.type === hoveredType.value
-    const isSelected = !isLowDifficulty.value && segIdx === selectedSegIdx.value
-
+  const step = currentStep.value
+  return formula.value.segments.map((seg, i) => {
+    const segStepIdx = formula.value.steps.findIndex(s => s.activeSegment === seg)
     return {
-      tok, idx, seg, segIdx, isDone, isCurrent, isHovered, isSelected,
+      seg,
+      meta: SEGMENT_META[seg],
+      done:   segStepIdx < stepIndex.value,
+      active: step?.activeSegment === seg,
     }
   })
 })
 
-const segmentColour = {
-  brackets: 'text-blue-300  bg-blue-900/50  border-blue-400',
-  orders:   'text-yellow-300 bg-yellow-900/50 border-yellow-400',
-  divmul:   'text-orange-300 bg-orange-900/50 border-orange-400',
-  addsub:   'text-green-300  bg-green-900/50  border-green-400',
-}
-
-const segmentHoverColour = {
-  brackets: 'bg-blue-700/70  scale-110',
-  orders:   'bg-yellow-700/70 scale-110',
-  divmul:   'bg-orange-700/70 scale-110',
-  addsub:   'bg-green-700/70  scale-110',
-}
-
-function tokenClass(rt) {
-  if (!rt.seg) return 'text-hp-gold'
-  const base = 'rounded px-1 py-0.5 border transition-all duration-150 cursor-default font-mono font-bold text-2xl'
-
-  if (rt.isDone) return `${base} opacity-40 border-transparent text-hp-gold/40`
-
-  const colour = segmentColour[rt.seg.type] ?? 'text-hp-gold'
-
-  if (rt.isHovered || rt.isSelected) {
-    return `${base} ${colour} ${segmentHoverColour[rt.seg.type]} border-current`
-  }
-  return `${base} ${colour} border-transparent`
-}
-
-// ─── legend shown at low difficulty ──────────────────────────────────────────
-const legend = computed(() => {
-  if (!formula.value) return []
-  return formula.value.segments.map((s, i) => ({
-    ...s,
-    stepNum: i + 1,
-    done: i < stepIndex.value,
-    active: i === stepIndex.value,
-  }))
-})
-
 // ─── actions ──────────────────────────────────────────────────────────────────
-
 function newFormula() {
-  const f = generateFormula(difficulty.value)
-  formula.value = f
-  resolvedTokens.value = [...f.displayTokens]
-  stepIndex.value = 0
-  hoveredType.value = null
-  selectedSegIdx.value = null
-  userInput.value = ''
-  feedback.value = ''
-  wrongGuess.value = ''
-  finished.value = false
+  formula.value     = generateFormula(difficulty.value)
+  stepIndex.value   = 0
+  hoveredSeg.value  = null
+  selectedSeg.value = null
+  userInput.value   = ''
+  feedback.value    = ''
+  wrongGuess.value  = ''
+  finished.value    = false
 }
 
-function onSegmentClick(rt) {
-  if (isLowDifficulty.value) return          // hover mode – no click needed
-  if (rt.isDone) return                       // already solved
-  if (!rt.seg) return                         // operator between segments
-  // only allow clicking the CURRENT (next to solve) segment
-  if (rt.segIdx !== stepIndex.value) return
-  selectedSegIdx.value = rt.segIdx
-  userInput.value = ''
-  feedback.value = ''
+function onTokenClick(t) {
+  if (isLowDifficulty.value) return
+  const step = currentStep.value
+  if (!step || t.segment !== step.activeSegment) return
+  selectedSeg.value = t.segment
+  userInput.value   = ''
+  feedback.value    = ''
 }
 
-function submitStep() {
-  if (!currentSegment.value) return
-  const seg = currentSegment.value
+function advanceStep(revealAnswer = false) {
+  const step = currentStep.value
+  if (!step) return
+
+  if (revealAnswer) {
+    // skip: show the answer and move on without scoring
+    selectedSeg.value = null
+    userInput.value   = ''
+    feedback.value    = ''
+    wrongGuess.value  = ''
+    stepIndex.value++
+    if (stepIndex.value >= formula.value.steps.length) finished.value = true
+    return
+  }
+
   const parsed = Number(userInput.value)
   if (isNaN(parsed) || userInput.value.trim() === '') return
 
-  // For the last addsub segment we need to compute the expected value on the fly
-  // because it involves the already-resolved values of prior segments.
-  let expected = seg.value
-  if (seg.type === 'addsub') {
-    // At this point resolvedTokens has all prior segments replaced.
-    // Evaluate the whole remaining expression.
-    const flat = resolvedTokens.value.filter(t => t !== '(' && t !== ')')
-    expected = Math.round(evalTokens(flat) * 1000) / 1000
-  }
-
-  if (Math.round(parsed * 1000) / 1000 === expected) {
-    // Replace the segment tokens in resolvedTokens with the result
-    // We replace the tokens at the segment indices with the value (first index)
-    // and empty strings (remaining indices) – then we filter empties for eval
-    // but keep them for index stability.
-    const newToks = [...resolvedTokens.value]
-    seg.indices.forEach((absIdx, ii) => {
-      newToks[absIdx] = ii === 0 ? String(expected) : ''
-    })
-    resolvedTokens.value = newToks
-
+  if (round(parsed) === step.expectedAnswer) {
+    selectedSeg.value = null
+    userInput.value   = ''
+    feedback.value    = 'correct'
+    wrongGuess.value  = ''
     stepIndex.value++
-    selectedSegIdx.value = null
-    userInput.value = ''
-    feedback.value = 'correct'
-    wrongGuess.value = ''
 
-    // check if all steps done
-    if (stepIndex.value >= formula.value.segments.length) {
+    if (stepIndex.value >= formula.value.steps.length) {
       finished.value = true
       score.value++
       totalPlayed.value++
       streak.value++
     }
   } else {
-    feedback.value = 'wrong'
+    feedback.value  = 'wrong'
     wrongGuess.value = userInput.value
-    streak.value = 0
+    streak.value    = 0
     totalPlayed.value++
   }
 }
 
 function handleKey(e) {
-  if (e.key === 'Enter') submitStep()
+  if (e.key === 'Enter') advanceStep()
 }
 
-function skipToNext() {
-  // reveal answer for current step
-  const seg = currentSegment.value
-  if (!seg) return
-  let expected = seg.value
-  if (seg.type === 'addsub') {
-    const flat = resolvedTokens.value.filter(t => t !== '(' && t !== ')')
-    expected = Math.round(evalTokens(flat) * 1000) / 1000
-  }
-  const newToks = [...resolvedTokens.value]
-  seg.indices.forEach((absIdx, ii) => {
-    newToks[absIdx] = ii === 0 ? String(expected) : ''
-  })
-  resolvedTokens.value = newToks
-  stepIndex.value++
-  selectedSegIdx.value = null
-  userInput.value = ''
-  feedback.value = ''
-  wrongGuess.value = ''
-  if (stepIndex.value >= formula.value.segments.length) {
-    finished.value = true
-  }
-}
-
-// regenerate when difficulty changes
 watch(difficulty, () => newFormula())
-
-// kick off
 newFormula()
 </script>
 
@@ -475,7 +416,9 @@ newFormula()
           ? 'bg-blue-900/50 text-blue-300 border-blue-400'
           : 'bg-purple-900/50 text-purple-300 border-purple-400'"
       >
-        {{ isLowDifficulty ? '👆 Hover mode – hover to highlight BODMAS groups' : '🖱️ Click mode – click the part to solve next' }}
+        {{ isLowDifficulty
+          ? '👆 Hover mode – hover over the formula or legend to highlight BODMAS groups'
+          : '🖱️ Click mode – click the highlighted part of the formula to solve it' }}
       </span>
     </div>
 
@@ -484,37 +427,35 @@ newFormula()
 
       <!-- Formula display -->
       <div class="flex flex-wrap justify-center items-center gap-1 mb-8 min-h-[4rem]">
-        <template v-for="rt in richTokens" :key="rt.idx">
+        <template v-if="currentStep">
           <span
-            v-if="rt.tok !== ''"
-            :class="tokenClass(rt)"
-            @mouseover="isLowDifficulty && rt.seg ? hoveredType = rt.seg.type : null"
-            @mouseleave="isLowDifficulty ? hoveredType = null : null"
-            @click="onSegmentClick(rt)"
-            :style="!isLowDifficulty && rt.seg && rt.segIdx === stepIndex && !rt.isDone ? 'cursor:pointer' : ''"
-          >
-            {{ rt.tok }}
-          </span>
+            v-for="(t, i) in currentStep.tokens"
+            :key="i"
+            :class="tokenClass(t)"
+            @mouseover="isLowDifficulty ? hoveredSeg = t.segment : null"
+            @mouseleave="isLowDifficulty ? hoveredSeg = null : null"
+            @click="onTokenClick(t)"
+          >{{ t.text }}</span>
         </template>
       </div>
 
-      <!-- BODMAS Legend (always visible, highlights on hover in low-diff mode) -->
+      <!-- BODMAS Legend -->
       <div class="flex flex-wrap gap-2 justify-center mb-6">
         <div
           v-for="item in legend"
-          :key="item.type"
+          :key="item.seg"
           class="flex items-center gap-1 px-3 py-1 rounded-full border text-sm font-bold transition-all duration-150"
           :class="[
-            segmentColour[item.type],
-            item.done ? 'opacity-30' : '',
+            item.meta.colour,
+            item.done   ? 'opacity-30' : '',
             item.active ? 'ring-2 ring-white/50 scale-105' : '',
-            isLowDifficulty && hoveredType === item.type ? 'scale-110 ring-2 ring-white/70' : ''
+            isLowDifficulty && hoveredSeg === item.seg ? 'scale-110 ring-2 ring-white/70' : '',
           ]"
-          @mouseover="isLowDifficulty ? hoveredType = item.type : null"
-          @mouseleave="isLowDifficulty ? hoveredType = null : null"
+          @mouseover="isLowDifficulty ? hoveredSeg = item.seg : null"
+          @mouseleave="isLowDifficulty ? hoveredSeg = null : null"
         >
-          {{ item.emoji }} {{ item.label }}
-          <span v-if="item.done" class="ml-1">✓</span>
+          {{ item.meta.emoji }} {{ item.meta.label }}
+          <span v-if="item.done"   class="ml-1">✓</span>
           <span v-else-if="item.active && !finished" class="ml-1 animate-pulse">←</span>
         </div>
       </div>
@@ -522,36 +463,34 @@ newFormula()
       <!-- Step instructions -->
       <div v-if="!finished" class="text-center mb-4">
         <template v-if="isLowDifficulty">
-          <!-- Low difficulty: show current step info + auto-input -->
           <p class="text-hp-gold/80 mb-2 text-sm">
-            Step {{ stepIndex + 1 }} of {{ formula?.segments.length }}:
+            Step {{ stepIndex + 1 }} of {{ formula?.steps.length }}:
             Solve the
-            <span class="font-bold" :class="segmentColour[currentSegment?.type]?.split(' ')[0]">
-              {{ currentSegment?.label }}
+            <span class="font-bold" :class="SEGMENT_META[currentStep?.activeSegment]?.colour.split(' ')[0]">
+              {{ SEGMENT_META[currentStep?.activeSegment]?.label }}
             </span>
             part
           </p>
-          <p class="text-hp-gold text-lg mb-3 font-mono">
-            {{ currentSegment?.tokens?.join(' ') }}
+          <p class="text-hp-gold text-xl mb-3 font-mono font-bold">
+            {{ currentStep?.hint }}
           </p>
         </template>
         <template v-else>
-          <!-- High difficulty: prompt user to click a segment -->
-          <p v-if="selectedSegIdx === null" class="text-hp-gold/80 mb-2 text-sm">
-            👆 Click the part of the formula you want to solve next
-            <span class="text-hp-gold/50 text-xs block mt-1">(Solve in BODMAS order)</span>
-          </p>
-          <p v-else class="text-hp-gold/80 mb-2 text-sm">
-            Solve:
-            <span class="font-mono text-hp-gold font-bold">
-              {{ formula?.segments[selectedSegIdx]?.tokens?.join(' ') }}
+          <p v-if="selectedSeg === null" class="text-hp-gold/80 mb-2 text-sm">
+            👆 Click the
+            <span class="font-bold" :class="SEGMENT_META[currentStep?.activeSegment]?.colour.split(' ')[0]">
+              {{ SEGMENT_META[currentStep?.activeSegment]?.label }}
             </span>
+            part of the formula
+          </p>
+          <p v-else class="text-hp-gold/80 mb-2 text-sm font-mono font-bold text-lg">
+            {{ currentStep?.hint }}
           </p>
         </template>
       </div>
 
       <!-- Answer input -->
-      <div v-if="!finished && (isLowDifficulty || selectedSegIdx !== null)" class="flex flex-col items-center gap-3">
+      <div v-if="!finished && (isLowDifficulty || selectedSeg !== null)" class="flex flex-col items-center gap-3">
         <div class="flex gap-2 w-full max-w-sm">
           <input
             v-model="userInput"
@@ -562,7 +501,7 @@ newFormula()
             autofocus
           />
           <button
-            @click="submitStep"
+            @click="advanceStep()"
             class="bg-hp-gold hover:bg-hp-bronze text-hp-navy font-hp font-bold px-5 py-3 rounded-lg transition-all duration-300 hover:scale-105 shadow-lg"
           >
             ✓
@@ -574,11 +513,11 @@ newFormula()
           ✅ Correct! Keep going!
         </p>
         <p v-else-if="feedback === 'wrong'" class="text-yellow-400 font-bold text-lg">
-          ❌ Not quite – {{ wrongGuess }} is wrong. Try again!
+          ❌ {{ wrongGuess }} is wrong – try again!
         </p>
 
         <button
-          @click="skipToNext"
+          @click="advanceStep(true)"
           class="text-hp-gold/50 hover:text-hp-gold/80 text-xs underline transition-colors"
         >
           Show answer &amp; skip
