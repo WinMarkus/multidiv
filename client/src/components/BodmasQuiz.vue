@@ -322,7 +322,7 @@ function advanceStep(revealAnswer = false) {
   }
 
   const parsed = Number(userInput.value)
-  if (isNaN(parsed) || userInput.value.trim() === '') return
+  if (isNaN(parsed) || userInput.value === '') return
 
   if (round(parsed) === step.expectedAnswer) {
     selectedSeg.value = null
