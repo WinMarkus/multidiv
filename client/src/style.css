@@ -1,3 +1,54 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Default / Hogwarts theme ─────────────────────────────────────────── */
+:root,
+.theme-hogwarts {
+  --hp-gold:     212 175 55;   /* #d4af37 */
+  --hp-burgundy: 116   0  1;   /* #740001 */
+  --hp-bronze:   205 127 50;   /* #cd7f32 */
+  --hp-navy:      14  26 64;   /* #0e1a40 */
+  --hp-bg-gradient: linear-gradient(to bottom right, #0e1a40, #4c1d95, #740001);
+  --hp-badge: '⚡';
+}
+
+/* ── Gryffindor ───────────────────────────────────────────────────────── */
+.theme-gryffindor {
+  --hp-gold:     212 175 55;   /* #d4af37 — gold */
+  --hp-burgundy: 116   0  1;   /* #740001 — scarlet */
+  --hp-bronze:   174   0  1;   /* #ae0001 — brighter scarlet (hover) */
+  --hp-navy:      26   0  0;   /* #1a0000 — near-black crimson */
+  --hp-bg-gradient: linear-gradient(to bottom right, #1a0000, #740001, #3d1a00);
+  --hp-badge: '🦁';
+}
+
+/* ── Slytherin ────────────────────────────────────────────────────────── */
+.theme-slytherin {
+  --hp-gold:     170 170 170;  /* #aaaaaa — silver */
+  --hp-burgundy:  26  71  42;  /* #1a472a — emerald */
+  --hp-bronze:    42  98  61;  /* #2a623d — mid green (hover) */
+  --hp-navy:      13  31  19;  /* #0d1f13 — near-black green */
+  --hp-bg-gradient: linear-gradient(to bottom right, #0d1f13, #1a472a, #0d1f13);
+  --hp-badge: '🐍';
+}
+
+/* ── Hufflepuff ───────────────────────────────────────────────────────── */
+.theme-hufflepuff {
+  --hp-gold:     236 185  57;  /* #ecb939 — yellow */
+  --hp-burgundy:  55  46  41;  /* #372e29 — dark brown/black */
+  --hp-bronze:   240 192  64;  /* #f0c040 — lighter yellow (hover) */
+  --hp-navy:      28  21  16;  /* #1c1510 — near-black brown */
+  --hp-bg-gradient: linear-gradient(to bottom right, #1c1510, #372e29, #2d2000);
+  --hp-badge: '🦡';
+}
+
+/* ── Ravenclaw ────────────────────────────────────────────────────────── */
+.theme-ravenclaw {
+  --hp-gold:     148 107  45;  /* #946b2d — bronze */
+  --hp-burgundy:  34  47  91;  /* #222f5b — midnight blue */
+  --hp-bronze:    95 109 173;  /* #5f6dad — lighter blue (hover) */
+  --hp-navy:      13  16  48;  /* #0d1030 — near-black blue */
+  --hp-bg-gradient: linear-gradient(to bottom right, #0d1030, #222f5b, #946b2d);
+  --hp-badge: '🦅';
+}

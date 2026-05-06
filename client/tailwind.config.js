@@ -7,10 +7,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        'hp-gold': '#d4af37',
-        'hp-burgundy': '#740001',
-        'hp-bronze': '#cd7f32',
-        'hp-navy': '#0e1a40',
+        'hp-gold': 'rgb(var(--hp-gold) / <alpha-value>)',
+        'hp-burgundy': 'rgb(var(--hp-burgundy) / <alpha-value>)',
+        'hp-bronze': 'rgb(var(--hp-bronze) / <alpha-value>)',
+        'hp-navy': 'rgb(var(--hp-navy) / <alpha-value>)',
       },
       fontFamily: {
         'hp': ['Georgia', 'serif'],
