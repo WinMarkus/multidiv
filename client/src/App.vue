@@ -8,8 +8,8 @@ useTheme()
 
 <template>
   <div class="min-h-screen" style="background: var(--hp-bg-gradient)">
-    <!-- Global theme switcher anchored to bottom-right -->
-    <div class="fixed bottom-4 right-4 z-50">
+    <!-- Global theme switcher anchored to left center -->
+    <div class="fixed left-4 top-1/2 -translate-y-1/2 z-50">
       <ThemeSwitcher />
     </div>
     <router-view />

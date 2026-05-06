@@ -35,7 +35,7 @@ function selectTheme(id) {
     >
       <div
         v-if="open"
-        class="absolute right-0 mt-2 w-56 rounded-xl border-2 border-hp-gold/40 shadow-2xl overflow-hidden z-50"
+        class="absolute left-0 mt-2 w-56 rounded-xl border-2 border-hp-gold/40 shadow-2xl overflow-hidden z-50"
         style="background: var(--hp-bg-gradient)"
       >
         <button
