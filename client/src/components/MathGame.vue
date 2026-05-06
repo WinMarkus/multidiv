@@ -240,6 +240,12 @@ function closeChallengeMode() {
       >
         📐 Shapes Quiz
       </router-link>
+      <router-link 
+        to="/bodmas"
+        class="bg-hp-burgundy hover:bg-hp-burgundy/80 text-hp-gold font-hp px-4 py-2 rounded-lg border-2 border-hp-gold/50 transition-all duration-300 hover:scale-105 shadow-lg"
+      >
+        🧮 BODMAS
+      </router-link>
     </div>
 
     <!-- Challenge Mode Button -->
