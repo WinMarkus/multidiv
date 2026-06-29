@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import MathGame from '../components/MathGame.vue'
 import AustrianQuiz from '../components/AustrianQuiz.vue'
 import ShapesQuiz from '../components/ShapesQuiz.vue'
+import ShapeMovements from '../components/ShapeMovements.vue'
 import BodmasQuiz from '../components/BodmasQuiz.vue'
 
 const routes = [
@@ -19,6 +20,11 @@ const routes = [
     path: '/shapes-quiz',
     name: 'ShapesQuiz',
     component: ShapesQuiz
+  },
+  {
+    path: '/shape-movements',
+    name: 'ShapeMovements',
+    component: ShapeMovements
   },
   {
     path: '/bodmas',
