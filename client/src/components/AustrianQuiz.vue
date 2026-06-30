@@ -1,5 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useTheme } from '../composables/useTheme'
+
+const { activeHouseName, activeHouseEmoji, activeHousePointsLabel } = useTheme()
 
 const bundeslaender = [
   { name: 'Wien', hauptstadt: 'Wien' },
@@ -19,7 +22,7 @@ const score = ref(0)
 const totalQuestions = ref(0)
 const feedback = ref('')
 const showFeedback = ref(false)
-const gryffindorPoints = ref(0)
+const housePoints = ref(0)
 
 const scorePercentage = computed(() => {
   if (totalQuestions.value === 0) return 0
@@ -59,8 +62,8 @@ function selectAndSubmitAnswer(option) {
   
   if (selectedAnswer.value === currentQuestion.value.correctAnswer) {
     score.value++
-    gryffindorPoints.value += 10
-    feedback.value = '🏆 Richtig! 10 Punkte für Gryffindor! 🦁'
+    housePoints.value += 10
+    feedback.value = `🏆 Richtig! 10 Punkte für ${activeHouseName.value}! ${activeHouseEmoji.value}`
     showFeedback.value = true
     
     setTimeout(() => {
@@ -98,15 +101,15 @@ onMounted(() => {
       <h1 class="text-5xl font-hp text-hp-gold mb-2 drop-shadow-lg">
         🏰 Österreich Geografie Quiz 🗺️
       </h1>
-      <p class="text-xl text-hp-gold/80">Sammle Punkte für Gryffindor!</p>
+      <p class="text-xl text-hp-gold/80">Sammle Punkte für {{ activeHouseName }}!</p>
     </div>
     
     <!-- Stats Bar -->
     <div class="bg-hp-navy/50 backdrop-blur rounded-lg p-4 mb-6 w-full max-w-2xl border-2 border-hp-gold/30">
       <div class="grid grid-cols-3 gap-4 text-center">
         <div>
-          <p class="text-hp-gold/70 text-sm">Gryffindor Punkte</p>
-          <p class="text-2xl font-bold text-red-400">🦁 {{ gryffindorPoints }}</p>
+          <p class="text-hp-gold/70 text-sm">{{ activeHousePointsLabel }}</p>
+          <p class="text-2xl font-bold text-hp-gold">{{ activeHouseEmoji }} {{ housePoints }}</p>
         </div>
         <div>
           <p class="text-hp-gold/70 text-sm">Richtige Antworten</p>

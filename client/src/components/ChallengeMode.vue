@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -44,6 +44,17 @@ const problemDisplay = computed(() => {
       return `If ${num1} out of ${num2} outcomes happen, what is the probability (%)?`
     default:
       return ''
+  }
+})
+
+const problemTypeLabel = computed(() => {
+  switch(problemType.value) {
+    case 'multiplication': return 'Multiplication Spell'
+    case 'division': return 'Division Charm'
+    case 'addition': return 'Addition Enchantment'
+    case 'subtraction': return 'Subtraction Sorcery'
+    case 'probability': return 'Probability Potion'
+    default: return 'Number Spell'
   }
 })
 
@@ -208,207 +219,156 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <!-- Configuration Dialog -->
-    <div v-if="showConfig" class="bg-gradient-to-br from-hp-burgundy/90 to-purple-900/90 backdrop-blur rounded-xl p-8 max-w-md w-full border-4 border-hp-gold/50 shadow-2xl">
-      <h2 class="text-3xl font-hp text-hp-gold mb-6 text-center">⚡ Challenge Mode ⚡</h2>
-      
-      <div class="space-y-6">
-        <div>
-          <label class="block text-hp-gold font-hp text-lg mb-2">
-            Time Limit (seconds per question):
-          </label>
-          <input
-            v-model.number="timeLimit"
-            type="number"
-            min="5"
-            max="120"
-            class="w-full px-4 py-3 text-xl text-center bg-white/10 border-2 border-hp-gold/50 rounded-lg text-hp-gold focus:outline-none focus:ring-2 focus:ring-hp-gold"
-          />
+  <div class="fixed inset-0 z-[80] overflow-y-auto bg-black/75 p-3 backdrop-blur-xl sm:p-5">
+    <div class="mx-auto flex min-h-full w-full max-w-3xl items-center justify-center py-4">
+      <!-- Configuration Dialog -->
+      <div v-if="showConfig" class="magic-card w-full p-5 sm:p-7">
+        <div class="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <p class="text-xs font-black uppercase tracking-[0.22em] text-hp-gold/60">Timed Quest</p>
+            <h2 class="mt-2 text-3xl font-black text-white sm:text-4xl">⚡ House Cup Sprint</h2>
+            <p class="mt-2 text-sm text-white/65">A short, intense spell duel: answer fast, then choose whether the next round gets faster or harder.</p>
+          </div>
+          <button @click="closeChallenge" class="btn-ghost shrink-0 px-4" aria-label="Close challenge">✕</button>
         </div>
-        
-        <div>
-          <label class="block text-hp-gold font-hp text-lg mb-2">
-            Starting Difficulty:
+
+        <div class="grid gap-4 sm:grid-cols-3">
+          <label class="magic-card-soft p-4 text-sm font-bold text-hp-gold/80">
+            Time / question
+            <input
+              v-model.number="timeLimit"
+              type="number"
+              min="5"
+              max="120"
+              class="mt-2 w-full rounded-2xl border border-hp-gold/30 bg-white/10 px-4 py-3 text-center text-xl font-black text-hp-gold outline-none focus:ring-2 focus:ring-hp-gold/60"
+            />
           </label>
-          <select
-            v-model.number="difficulty"
-            class="w-full bg-hp-navy/80 text-hp-gold border-2 border-hp-gold/50 rounded-lg px-4 py-3 font-hp focus:outline-none focus:ring-2 focus:ring-hp-gold"
-          >
-            <option value="1">Apprentice (1)</option>
-            <option value="2">Novice (2)</option>
-            <option value="3">Adept (3)</option>
-            <option value="4">Expert (4)</option>
-            <option value="5">Master (5)</option>
-            <option value="6">Grandmaster (6)</option>
-            <option value="7">Archmage (7)</option>
-            <option value="8">Legend (8)</option>
-            <option value="9">Mythical (9)</option>
-            <option value="10">Godlike (10)</option>
-          </select>
+
+          <label class="magic-card-soft p-4 text-sm font-bold text-hp-gold/80">
+            Difficulty
+            <select
+              v-model.number="difficulty"
+              class="mt-2 w-full rounded-2xl border border-hp-gold/30 bg-hp-navy/80 px-4 py-3 font-bold text-hp-gold outline-none focus:ring-2 focus:ring-hp-gold/60"
+            >
+              <option value="1">Apprentice (1)</option>
+              <option value="2">Novice (2)</option>
+              <option value="3">Adept (3)</option>
+              <option value="4">Expert (4)</option>
+              <option value="5">Master (5)</option>
+              <option value="6">Grandmaster (6)</option>
+              <option value="7">Archmage (7)</option>
+              <option value="8">Legend (8)</option>
+              <option value="9">Mythical (9)</option>
+              <option value="10">Godlike (10)</option>
+            </select>
+          </label>
+
+          <label class="magic-card-soft p-4 text-sm font-bold text-hp-gold/80">
+            Spell type
+            <select
+              v-model="problemType"
+              class="mt-2 w-full rounded-2xl border border-hp-gold/30 bg-hp-navy/80 px-4 py-3 font-bold text-hp-gold outline-none focus:ring-2 focus:ring-hp-gold/60"
+            >
+              <option value="multiplication">Multiplication</option>
+              <option value="division">Division</option>
+              <option value="addition">Addition</option>
+              <option value="subtraction">Subtraction</option>
+              <option value="probability">Probability</option>
+            </select>
+          </label>
         </div>
-        
-        <div>
-          <label class="block text-hp-gold font-hp text-lg mb-2">
-            Problem Type:
-          </label>
-          <select
-            v-model="problemType"
-            class="w-full bg-hp-navy/80 text-hp-gold border-2 border-hp-gold/50 rounded-lg px-4 py-3 font-hp focus:outline-none focus:ring-2 focus:ring-hp-gold"
-          >
-            <option value="multiplication">Multiplication</option>
-            <option value="division">Division</option>
-            <option value="addition">Addition</option>
-            <option value="subtraction">Subtraction</option>
-            <option value="probability">Probability</option>
-          </select>
+
+        <div class="mt-6 grid gap-3 sm:grid-cols-2">
+          <button @click="closeChallenge" class="btn-secondary w-full">Cancel</button>
+          <button @click="startChallenge" class="btn-primary w-full">Start Sprint ✨</button>
         </div>
       </div>
-      
-      <div class="mt-8 flex gap-4">
-        <button
-          @click="closeChallenge"
-          class="flex-1 bg-hp-navy/80 hover:bg-hp-navy text-hp-gold font-hp px-6 py-3 rounded-lg border-2 border-hp-gold/50 transition-all duration-300"
-        >
-          Cancel
-        </button>
-        <button
-          @click="startChallenge"
-          class="flex-1 bg-hp-gold hover:bg-hp-bronze text-hp-navy font-hp font-bold px-6 py-3 rounded-lg transition-all duration-300 hover:scale-105 shadow-lg"
-        >
-          Start Challenge!
-        </button>
-      </div>
-    </div>
-    
-    <!-- Active Challenge -->
-    <div v-else-if="isActive && !showSpeedOrDifficultyDialog" class="bg-gradient-to-br from-hp-burgundy/90 to-purple-900/90 backdrop-blur rounded-xl p-8 max-w-2xl w-full border-4 border-hp-gold/50 shadow-2xl">
-      <!-- Header with stats and timer -->
-      <div class="flex justify-between items-center mb-6">
-        <div class="text-hp-gold font-hp">
-          <span class="text-2xl font-bold">⏱️ {{ timeRemaining }}s</span>
+
+      <!-- Active Challenge -->
+      <div v-else-if="isActive && !showSpeedOrDifficultyDialog" class="magic-card w-full p-5 sm:p-7">
+        <div class="mb-5 grid grid-cols-3 gap-3 text-center">
+          <div class="stat-pill">
+            <p class="text-xs font-bold uppercase tracking-wide text-hp-gold/60">Timer</p>
+            <p class="mt-1 text-2xl font-black text-hp-gold">⏱️ {{ timeRemaining }}s</p>
+          </div>
+          <div class="stat-pill">
+            <p class="text-xs font-bold uppercase tracking-wide text-hp-gold/60">Score</p>
+            <p class="mt-1 text-2xl font-black text-hp-gold">{{ correctCount }}/{{ totalAttempts }}</p>
+          </div>
+          <div class="stat-pill">
+            <p class="text-xs font-bold uppercase tracking-wide text-hp-gold/60">Level</p>
+            <p class="mt-1 text-2xl font-black text-hp-gold">{{ difficulty }}</p>
+          </div>
         </div>
-        <div class="text-center">
-          <p class="text-hp-gold/70 text-sm">Progress</p>
-          <p class="text-2xl font-bold text-hp-gold">✅ {{ correctCount }} / {{ totalAttempts }}</p>
-        </div>
-        <div class="text-center">
-          <p class="text-hp-gold/70 text-sm">Level</p>
-          <p class="text-2xl font-bold text-hp-gold">{{ difficulty }}</p>
-        </div>
-      </div>
-      
-      <!-- Problem Display -->
-      <div class="text-center mb-8">
-        <div class="inline-block bg-hp-navy/50 px-6 py-2 rounded-lg border border-hp-gold/30 mb-4">
-          <p class="text-sm text-hp-gold/60">
-            {{ problemType === 'multiplication' ? 'Multiplication Spell' : 
-               problemType === 'division' ? 'Division Charm' : 
-               problemType === 'addition' ? 'Addition Enchantment' : 
-               problemType === 'subtraction' ? 'Subtraction Sorcery' : 'Probability Potion' }}
+
+        <div class="mb-5 text-center">
+          <p class="text-xs font-black uppercase tracking-[0.22em] text-hp-gold/60">{{ problemTypeLabel }}</p>
+          <p class="mt-5 rounded-3xl border border-hp-gold/15 bg-black/20 px-4 py-8 font-hp text-[clamp(2.6rem,14vw,5.5rem)] leading-none text-hp-gold drop-shadow-lg">
+            {{ problemDisplay }}
           </p>
         </div>
-        
-        <p class="text-6xl font-hp text-hp-gold mb-4 drop-shadow-lg">
-          {{ problemDisplay }}
-        </p>
-      </div>
-      
-      <!-- Answer Input -->
-      <div class="flex flex-col items-center gap-4">
-        <input
-          v-model="userAnswer"
-          @keypress="handleKeyPress"
-          type="number"
-          placeholder="Enter your answer..."
-          class="w-full max-w-md px-6 py-4 text-2xl text-center bg-white/10 border-2 border-hp-gold/50 rounded-lg text-hp-gold placeholder-hp-gold/30 focus:outline-none focus:ring-2 focus:ring-hp-gold focus:border-transparent backdrop-blur"
-          autofocus
-        />
-        
-        <div class="flex gap-4 w-full max-w-md">
-          <button
-            @click="submitAnswer"
-            :disabled="!userAnswer"
-            class="flex-1 bg-hp-gold hover:bg-hp-bronze text-hp-navy font-hp font-bold px-8 py-4 rounded-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg text-xl"
-          >
-            Submit ✨
-          </button>
-          <button
-            @click="endChallenge"
-            class="bg-hp-burgundy/80 hover:bg-hp-burgundy text-hp-gold font-hp px-6 py-4 rounded-lg border-2 border-hp-gold/50 transition-all duration-300"
-          >
-            End Challenge
-          </button>
-        </div>
-      </div>
-      
-      <!-- Feedback -->
-      <div v-if="feedback" class="mt-6 text-center">
-        <p class="text-2xl font-hp" :class="feedback.includes('Correct') ? 'text-green-400' : 'text-yellow-400'">
-          {{ feedback }}
-        </p>
-      </div>
-    </div>
-    
-    <!-- Speed or Difficulty Dialog -->
-    <div v-else-if="showSpeedOrDifficultyDialog" class="bg-gradient-to-br from-hp-burgundy/90 to-purple-900/90 backdrop-blur rounded-xl p-8 max-w-md w-full border-4 border-hp-gold/50 shadow-2xl">
-      <h2 class="text-3xl font-hp text-hp-gold mb-4 text-center">🎉 Great Job! 🎉</h2>
-      <p class="text-xl text-hp-gold/80 text-center mb-8 font-hp">
-        You've completed 3 challenges successfully!<br/>
-        Ready for the next level?
-      </p>
-      
-      <div class="space-y-4">
-        <button
-          @click="chooseFaster"
-          class="w-full bg-hp-gold hover:bg-hp-bronze text-hp-navy font-hp font-bold px-6 py-4 rounded-lg transition-all duration-300 hover:scale-105 shadow-lg text-xl"
-        >
-          ⚡ Go Faster! (Reduce time by 20%)
-        </button>
-        <button
-          @click="chooseHarder"
-          :disabled="difficulty >= 10"
-          class="w-full bg-hp-gold hover:bg-hp-bronze text-hp-navy font-hp font-bold px-6 py-4 rounded-lg transition-all duration-300 hover:scale-105 shadow-lg text-xl disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          🔥 Go Harder! (Increase difficulty)
-        </button>
-        <button
-          @click="continueCurrent"
-          class="w-full bg-hp-navy/80 hover:bg-hp-navy text-hp-gold font-hp px-6 py-3 rounded-lg border-2 border-hp-gold/50 transition-all duration-300"
-        >
-          Continue Current Settings
-        </button>
-      </div>
-    </div>
-    
-    <!-- Challenge Complete -->
-    <div v-else-if="challengeComplete" class="bg-gradient-to-br from-hp-burgundy/90 to-purple-900/90 backdrop-blur rounded-xl p-8 max-w-md w-full border-4 border-hp-gold/50 shadow-2xl">
-      <h2 class="text-3xl font-hp text-hp-gold mb-6 text-center">Challenge Complete! 🎊</h2>
-      
-      <div class="space-y-4 mb-8">
-        <div class="bg-hp-navy/50 p-4 rounded-lg border border-hp-gold/30">
-          <p class="text-hp-gold/70 text-sm text-center">Total Score</p>
-          <p class="text-4xl font-bold text-hp-gold text-center">{{ score }}%</p>
-        </div>
-        
-        <div class="grid grid-cols-2 gap-4">
-          <div class="bg-hp-navy/50 p-4 rounded-lg border border-hp-gold/30 text-center">
-            <p class="text-hp-gold/70 text-sm">Correct</p>
-            <p class="text-2xl font-bold text-green-400">{{ correctCount }}</p>
-          </div>
-          <div class="bg-hp-navy/50 p-4 rounded-lg border border-hp-gold/30 text-center">
-            <p class="text-hp-gold/70 text-sm">Total</p>
-            <p class="text-2xl font-bold text-hp-gold">{{ totalAttempts }}</p>
+
+        <div class="flex flex-col items-center gap-4">
+          <input
+            v-model="userAnswer"
+            @keypress="handleKeyPress"
+            type="number"
+            inputmode="numeric"
+            placeholder="Enter answer"
+            class="w-full rounded-2xl border border-hp-gold/30 bg-white/10 px-5 py-4 text-center text-2xl font-black text-hp-gold placeholder-hp-gold/35 outline-none backdrop-blur focus:ring-2 focus:ring-hp-gold/60"
+          />
+
+          <div class="grid w-full gap-3 sm:grid-cols-[1fr_auto]">
+            <button @click="submitAnswer" :disabled="!userAnswer" class="btn-primary w-full text-lg disabled:cursor-not-allowed disabled:opacity-45">
+              Submit ✨
+            </button>
+            <button @click="endChallenge" class="btn-secondary w-full sm:w-auto">End</button>
           </div>
         </div>
+
+        <div v-if="feedback" class="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+          <p class="text-xl font-black" :class="feedback.includes('Correct') ? 'text-emerald-300' : 'text-amber-300'">
+            {{ feedback }}
+          </p>
+        </div>
       </div>
-      
-      <button
-        @click="closeChallenge"
-        class="w-full bg-hp-gold hover:bg-hp-bronze text-hp-navy font-hp font-bold px-6 py-4 rounded-lg transition-all duration-300 hover:scale-105 shadow-lg text-xl"
-      >
-        Back to Main Game
-      </button>
+
+      <!-- Speed or Difficulty Dialog -->
+      <div v-else-if="showSpeedOrDifficultyDialog" class="magic-card w-full max-w-lg p-5 sm:p-7">
+        <h2 class="text-center text-3xl font-black text-white">🎉 Round cleared</h2>
+        <p class="mx-auto mt-3 max-w-sm text-center text-white/70">You solved 3 challenges. Pick how the next round should evolve.</p>
+
+        <div class="mt-6 grid gap-3">
+          <button @click="chooseFaster" class="btn-primary w-full">⚡ Go Faster</button>
+          <button @click="chooseHarder" :disabled="difficulty >= 10" class="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-45">🔥 Go Harder</button>
+          <button @click="continueCurrent" class="btn-secondary w-full">Continue Current Settings</button>
+        </div>
+      </div>
+
+      <!-- Challenge Complete -->
+      <div v-else-if="challengeComplete" class="magic-card w-full max-w-lg p-5 sm:p-7">
+        <h2 class="text-center text-3xl font-black text-white">Challenge Complete 🎊</h2>
+
+        <div class="mt-6 grid gap-3">
+          <div class="stat-pill text-center">
+            <p class="text-xs font-bold uppercase tracking-wide text-hp-gold/60">Total Score</p>
+            <p class="mt-1 text-5xl font-black text-hp-gold">{{ score }}%</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="stat-pill text-center">
+              <p class="text-xs font-bold uppercase tracking-wide text-hp-gold/60">Correct</p>
+              <p class="mt-1 text-2xl font-black text-emerald-300">{{ correctCount }}</p>
+            </div>
+            <div class="stat-pill text-center">
+              <p class="text-xs font-bold uppercase tracking-wide text-hp-gold/60">Total</p>
+              <p class="mt-1 text-2xl font-black text-hp-gold">{{ totalAttempts }}</p>
+            </div>
+          </div>
+        </div>
+
+        <button @click="closeChallenge" class="btn-primary mt-6 w-full">Back to Academy</button>
+      </div>
     </div>
   </div>
 </template>
