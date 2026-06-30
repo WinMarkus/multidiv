@@ -1,17 +1,23 @@
 <script setup>
+import { computed } from 'vue'
+import { useTheme } from '../composables/useTheme'
+
 const props = defineProps({
   streak: Number
 })
 
-const messages = [
-  "🎉 Outstanding! 10 points to Gryffindor! 🎉",
-  "⚡ Brilliant spellwork! Professor McGonagall is impressed! ⚡",
-  "🌟 Magical! You're mastering these spells! 🌟",
-  "🏆 Excellent! Hermione would be proud! 🏆",
-  "✨ Spectacular! The Sorting Hat chose wisely! ✨"
-]
+const { activeHouseName, activeHouseEmoji } = useTheme()
+const randomIndex = Math.floor(Math.random() * 5)
 
-const randomMessage = messages[Math.floor(Math.random() * messages.length)]
+const messages = computed(() => [
+  `🎉 Outstanding! 10 points to ${activeHouseName.value}! ${activeHouseEmoji.value}`,
+  '⚡ Brilliant spellwork! Professor McGonagall is impressed! ⚡',
+  '🌟 Magical! You\'re mastering these spells! 🌟',
+  '🏆 Excellent! Hermione would be proud! 🏆',
+  '✨ Spectacular! The Sorting Hat chose wisely! ✨'
+])
+
+const randomMessage = computed(() => messages.value[randomIndex])
 </script>
 
 <template>

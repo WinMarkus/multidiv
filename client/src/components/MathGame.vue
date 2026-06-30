@@ -52,6 +52,17 @@ const problemDisplay = computed(() => {
   }
 })
 
+const problemTypeLabel = computed(() => {
+  switch(problemType.value) {
+    case 'multiplication': return 'Multiplication Spell'
+    case 'division': return 'Division Charm'
+    case 'addition': return 'Addition Enchantment'
+    case 'subtraction': return 'Subtraction Sorcery'
+    case 'probability': return 'Probability Potion'
+    default: return 'Number Spell'
+  }
+})
+
 function generateAnswerOptions(correctAnswer) {
   const options = new Set([correctAnswer])
   
@@ -91,9 +102,9 @@ async function fetchProblem() {
       answerOptions.value = generateAnswerOptions(data.answer)
     }
     
-    // Focus the input field after rendering
+    // Focus the input field after rendering, but do not summon the mobile keyboard on small touch devices.
     await nextTick()
-    if (answerInputRef.value) {
+    if (answerInputRef.value && window.matchMedia('(min-width: 768px)').matches) {
       answerInputRef.value.focus()
     }
   } catch (error) {
@@ -225,171 +236,173 @@ function closeChallengeMode() {
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-8 min-h-screen flex flex-col items-center justify-center">
-    <!-- Navigation -->
-    <div class="absolute top-4 right-4 flex gap-2">
-      <router-link 
-        to="/austria-quiz"
-        class="bg-hp-burgundy hover:bg-hp-burgundy/80 text-hp-gold font-hp px-4 py-2 rounded-lg border-2 border-hp-gold/50 transition-all duration-300 hover:scale-105 shadow-lg"
-      >
-        🏰 Österreich Quiz
-      </router-link>
-      <router-link 
-        to="/shapes-quiz"
-        class="bg-hp-burgundy hover:bg-hp-burgundy/80 text-hp-gold font-hp px-4 py-2 rounded-lg border-2 border-hp-gold/50 transition-all duration-300 hover:scale-105 shadow-lg"
-      >
-        📐 Shapes Quiz
-      </router-link>
-      <router-link 
-        to="/bodmas"
-        class="bg-hp-burgundy hover:bg-hp-burgundy/80 text-hp-gold font-hp px-4 py-2 rounded-lg border-2 border-hp-gold/50 transition-all duration-300 hover:scale-105 shadow-lg"
-      >
-        🧮 BODMAS
-      </router-link>
-    </div>
-
-    <!-- Challenge Mode Button -->
-    <div class="absolute top-4 left-4">
-      <button
-        @click="openChallengeMode"
-        class="bg-hp-gold hover:bg-hp-bronze text-hp-navy font-hp font-bold px-6 py-3 rounded-lg transition-all duration-300 hover:scale-105 shadow-lg"
-      >
-        ⚡ Challenge Mode
-      </button>
-    </div>
-
-    <!-- Header -->
-    <div class="text-center mb-8">
-      <h1 class="text-5xl font-hp text-hp-gold mb-2 drop-shadow-lg">
-        🧙‍♂️ Hogwards Math Academy 🧙‍♀️
-      </h1>
-      <p class="text-xl text-hp-gold/80">Master your spells of numbers!</p>
-    </div>
-    
-    <!-- Stats Bar -->
-    <div class="bg-hp-navy/50 backdrop-blur rounded-lg p-4 mb-6 w-full max-w-2xl border-2 border-hp-gold/30">
-      <div class="grid grid-cols-4 gap-4 text-center">
-        <div>
-          <p class="text-hp-gold/70 text-sm">Level</p>
-          <p class="text-2xl font-bold text-hp-gold">{{ difficulty }}</p>
-        </div>
-        <div>
-          <p class="text-hp-gold/70 text-sm">Streak</p>
-          <p class="text-2xl font-bold text-hp-gold">🔥 {{ correctStreak }}</p>
-        </div>
-        <div>
-          <p class="text-hp-gold/70 text-sm">Score</p>
-          <p class="text-2xl font-bold text-hp-gold">{{ score }}%</p>
-        </div>
-        <div>
-          <p class="text-hp-gold/70 text-sm">Correct</p>
-          <p class="text-2xl font-bold text-hp-gold">{{ totalCorrect }}/{{ totalAttempts }}</p>
+  <div class="space-y-6 md:space-y-8">
+    <section class="grid gap-4 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch">
+      <div class="magic-card overflow-hidden p-5 sm:p-7 md:p-8">
+        <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div class="space-y-4">
+            <div class="inline-flex items-center gap-2 rounded-full border border-hp-gold/20 bg-white/5 px-3 py-2 text-xs font-black uppercase tracking-[0.22em] text-hp-gold/80">
+              ✨ Academy 2.0
+            </div>
+            <div>
+              <h1 class="magic-title font-hp">Hogwarts Math Academy</h1>
+              <p class="magic-subtitle mt-3 max-w-2xl">
+                Train number spells, geometry, transformations and logic quests in short magical sessions.
+              </p>
+            </div>
+          </div>
+          <button @click="openChallengeMode" class="btn-primary w-full md:w-auto">
+            ⚡ Start Challenge
+          </button>
         </div>
       </div>
-    </div>
-    
-    <!-- Controls -->
-    <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-center">
-      <!-- Problem Type Toggle -->
-      <button
-        @click="toggleProblemType"
-        class="bg-hp-burgundy hover:bg-hp-burgundy/80 text-hp-gold font-hp px-6 py-3 rounded-lg border-2 border-hp-gold/50 transition-all duration-300 hover:scale-105 shadow-lg"
-      >
-        Switch Operation Type
-      </button>
-      
-      <!-- Difficulty Selector -->
-      <div class="flex items-center gap-3">
-        <label for="difficulty" class="text-hp-gold font-hp text-lg">
-          Difficulty:
-        </label>
-        <select
-          id="difficulty"
-          v-model="difficulty"
-          @change="onDifficultyChange"
-          class="bg-hp-navy/80 text-hp-gold border-2 border-hp-gold/50 rounded-lg px-4 py-2 font-hp focus:outline-none focus:ring-2 focus:ring-hp-gold focus:border-transparent backdrop-blur"
-        >
-          <option value="1">Apprentice (1)</option>
-          <option value="2">Novice (2)</option>
-          <option value="3">Adept (3)</option>
-          <option value="4">Expert (4)</option>
-          <option value="5">Master (5)</option>
-          <option value="6">Grandmaster (6)</option>
-          <option value="7">Archmage (7)</option>
-          <option value="8">Legend (8)</option>
-          <option value="9">Mythical (9)</option>
-          <option value="10">Godlike (10)</option>
-        </select>
+
+      <div class="magic-card-soft grid grid-cols-2 gap-3 p-4 sm:grid-cols-4 lg:grid-cols-2">
+        <div class="stat-pill">
+          <p class="text-xs font-bold uppercase tracking-wide text-hp-gold/60">Level</p>
+          <p class="mt-1 text-2xl font-black text-hp-gold">{{ difficulty }}</p>
+        </div>
+        <div class="stat-pill">
+          <p class="text-xs font-bold uppercase tracking-wide text-hp-gold/60">Streak</p>
+          <p class="mt-1 text-2xl font-black text-hp-gold">🔥 {{ correctStreak }}</p>
+        </div>
+        <div class="stat-pill">
+          <p class="text-xs font-bold uppercase tracking-wide text-hp-gold/60">Score</p>
+          <p class="mt-1 text-2xl font-black text-hp-gold">{{ score }}%</p>
+        </div>
+        <div class="stat-pill">
+          <p class="text-xs font-bold uppercase tracking-wide text-hp-gold/60">Correct</p>
+          <p class="mt-1 text-2xl font-black text-hp-gold">{{ totalCorrect }}/{{ totalAttempts }}</p>
+        </div>
       </div>
-    </div>
-    
-    <!-- Main Problem Card -->
-    <div class="bg-gradient-to-br from-hp-burgundy/80 to-purple-900/80 backdrop-blur rounded-xl p-8 w-full max-w-2xl border-4 border-hp-gold/50 shadow-2xl">
-      <div class="text-center mb-6">
-        <div class="inline-block bg-hp-navy/50 px-6 py-2 rounded-lg border border-hp-gold/30">
-          <p class="text-hp-gold/70 text-sm mb-1">Current Challenge</p>
-          <p class="text-sm text-hp-gold/60">
-            {{ problemType === 'multiplication' ? 'Multiplication Spell' : 
-               problemType === 'division' ? 'Division Charm' : 
-               problemType === 'addition' ? 'Addition Enchantment' : 
-               problemType === 'subtraction' ? 'Subtraction Sorcery' : 'Probability Potion' }}
+    </section>
+
+    <section class="mobile-safe-grid">
+      <router-link to="/shapes-quiz" class="quest-tile">
+        <div>
+          <div class="text-3xl">🧊</div>
+          <h2 class="mt-3 text-xl font-black text-white">3D Geometry Quest</h2>
+          <p class="mt-1 text-sm text-white/65">Solids, nets, volume, surface area and Euler puzzles.</p>
+        </div>
+        <span class="text-sm font-black text-hp-gold">Enter geometry →</span>
+      </router-link>
+
+      <router-link to="/shape-movements" class="quest-tile">
+        <div>
+          <div class="text-3xl">🪄</div>
+          <h2 class="mt-3 text-xl font-black text-white">Shape Movement Charms</h2>
+          <p class="mt-1 text-sm text-white/65">Flip, slide, turn and build magical creatures from cut shapes.</p>
+        </div>
+        <span class="text-sm font-black text-hp-gold">Cast charms →</span>
+      </router-link>
+
+      <router-link to="/bodmas" class="quest-tile">
+        <div>
+          <div class="text-3xl">🧮</div>
+          <h2 class="mt-3 text-xl font-black text-white">BODMAS Trials</h2>
+          <p class="mt-1 text-sm text-white/65">Master the order of operations under pressure.</p>
+        </div>
+        <span class="text-sm font-black text-hp-gold">Start trial →</span>
+      </router-link>
+
+      <router-link to="/austria-quiz" class="quest-tile">
+        <div>
+          <div class="text-3xl">🏔️</div>
+          <h2 class="mt-3 text-xl font-black text-white">Austria Quest</h2>
+          <p class="mt-1 text-sm text-white/65">A geography side quest for capitals and Bundesländer.</p>
+        </div>
+        <span class="text-sm font-black text-hp-gold">Explore →</span>
+      </router-link>
+    </section>
+
+    <section class="grid gap-4 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+      <aside class="magic-card-soft p-4 sm:p-5">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center lg:flex-col lg:items-stretch">
+          <button @click="toggleProblemType" class="btn-secondary w-full">
+            🔁 {{ problemTypeLabel }}
+          </button>
+
+          <label class="flex w-full flex-col gap-2 text-sm font-bold text-hp-gold/80">
+            Difficulty
+            <select
+              id="difficulty"
+              v-model="difficulty"
+              @change="onDifficultyChange"
+              class="w-full rounded-2xl border border-hp-gold/30 bg-hp-navy/70 px-4 py-3 font-bold text-hp-gold outline-none focus:ring-2 focus:ring-hp-gold/60"
+            >
+              <option value="1">Apprentice (1)</option>
+              <option value="2">Novice (2)</option>
+              <option value="3">Adept (3)</option>
+              <option value="4">Expert (4)</option>
+              <option value="5">Master (5)</option>
+              <option value="6">Grandmaster (6)</option>
+              <option value="7">Archmage (7)</option>
+              <option value="8">Legend (8)</option>
+              <option value="9">Mythical (9)</option>
+              <option value="10">Godlike (10)</option>
+            </select>
+          </label>
+        </div>
+      </aside>
+
+      <div class="magic-card p-5 sm:p-7">
+        <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-xs font-black uppercase tracking-[0.22em] text-hp-gold/60">Current Challenge</p>
+            <p class="mt-1 text-lg font-black text-white">{{ problemTypeLabel }}</p>
+          </div>
+          <div class="rounded-full border border-hp-gold/20 bg-white/5 px-3 py-2 text-sm font-bold text-hp-gold/80">
+            Level {{ difficulty }}
+          </div>
+        </div>
+
+        <div class="rounded-3xl border border-hp-gold/15 bg-black/20 px-4 py-8 text-center sm:px-6 sm:py-10">
+          <p class="font-hp text-[clamp(2.6rem,14vw,5.5rem)] leading-none text-hp-gold drop-shadow-lg">
+            {{ problemDisplay }}
+          </p>
+        </div>
+
+        <div class="mt-5 flex flex-col items-center gap-4">
+          <input
+            v-if="!useMultiselect"
+            ref="answerInputRef"
+            v-model="userAnswer"
+            @keypress="handleKeyPress"
+            type="number"
+            inputmode="numeric"
+            placeholder="Enter answer"
+            class="w-full rounded-2xl border border-hp-gold/30 bg-white/10 px-5 py-4 text-center text-2xl font-black text-hp-gold placeholder-hp-gold/35 outline-none backdrop-blur focus:ring-2 focus:ring-hp-gold/60"
+          />
+
+          <div v-else class="grid w-full grid-cols-2 gap-3">
+            <button
+              v-for="option in answerOptions"
+              :key="option"
+              @click="userAnswer = option.toString()"
+              :class="[
+                'min-h-16 rounded-2xl border px-5 py-4 text-center text-2xl font-black transition-all duration-200 active:scale-95',
+                userAnswer === option.toString()
+                  ? 'border-hp-gold bg-hp-gold text-hp-navy shadow-lg'
+                  : 'border-hp-gold/25 bg-white/10 text-hp-gold hover:bg-white/15'
+              ]"
+            >
+              {{ option }}
+            </button>
+          </div>
+
+          <button @click="submitAnswer" :disabled="!userAnswer" class="btn-primary w-full text-lg disabled:cursor-not-allowed disabled:opacity-45">
+            Cast Answer ✨
+          </button>
+        </div>
+
+        <div v-if="feedback" class="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+          <p class="text-xl font-black" :class="feedback.includes('Correct') ? 'text-emerald-300' : 'text-amber-300'">
+            {{ feedback }}
           </p>
         </div>
       </div>
-      
-      <div class="text-center mb-8">
-        <p class="text-6xl font-hp text-hp-gold mb-4 drop-shadow-lg">
-          {{ problemDisplay }}
-        </p>
-      </div>
-      
-      <div class="flex flex-col items-center gap-4">
-        <!-- Standard Input Mode -->
-        <input
-          v-if="!useMultiselect"
-          ref="answerInputRef"
-          v-model="userAnswer"
-          @keypress="handleKeyPress"
-          type="number"
-          placeholder="Enter your answer..."
-          class="w-full max-w-md px-6 py-4 text-2xl text-center bg-white/10 border-2 border-hp-gold/50 rounded-lg text-hp-gold placeholder-hp-gold/30 focus:outline-none focus:ring-2 focus:ring-hp-gold focus:border-transparent backdrop-blur"
-        />
-        
-        <!-- Multiselect Mode -->
-        <div v-else class="w-full max-w-md grid grid-cols-2 gap-3">
-          <button
-            v-for="option in answerOptions"
-            :key="option"
-            @click="userAnswer = option.toString()"
-            :class="[
-              'px-6 py-4 text-2xl text-center border-2 rounded-lg transition-all duration-300 font-hp font-bold',
-              userAnswer === option.toString()
-                ? 'bg-hp-gold text-hp-navy border-hp-gold scale-105 shadow-lg'
-                : 'bg-white/10 text-hp-gold border-hp-gold/50 hover:bg-white/20 hover:border-hp-gold hover:scale-102'
-            ]"
-          >
-            {{ option }}
-          </button>
-        </div>
-        
-        <button
-          @click="submitAnswer"
-          :disabled="!userAnswer"
-          class="w-full max-w-md bg-hp-gold hover:bg-hp-bronze text-hp-navy font-hp font-bold px-8 py-4 rounded-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg text-xl"
-        >
-          Cast Answer Spell ✨
-        </button>
-      </div>
-      
-      <!-- Feedback -->
-      <div v-if="feedback" class="mt-6 text-center">
-        <p class="text-2xl font-hp" :class="feedback.includes('Correct') ? 'text-green-400' : 'text-yellow-400'">
-          {{ feedback }}
-        </p>
-      </div>
-    </div>
-    
-    <!-- Explanation -->
+    </section>
+
     <Explanation 
       v-if="showExplanation && explanation"
       :explanation="explanation"
@@ -397,13 +410,11 @@ function closeChallengeMode() {
       @close="showExplanation = false"
     />
     
-    <!-- Celebration -->
     <Celebration 
       v-if="showCelebration"
       :streak="correctStreak"
     />
     
-    <!-- Harry Potter Animation -->
     <HarryPotterAnimation
       v-if="showHPAnimation"
       :streak="correctStreak"
@@ -411,12 +422,8 @@ function closeChallengeMode() {
       :trigger-type="hpAnimationType"
     />
     
-    <!-- Joke Display -->
-    <JokeDisplay
-      v-if="showJoke"
-    />
+    <JokeDisplay v-if="showJoke" />
     
-    <!-- Challenge Mode -->
     <ChallengeMode
       v-if="showChallengeMode"
       @close="closeChallengeMode"

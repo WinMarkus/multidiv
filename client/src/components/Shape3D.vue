@@ -14,12 +14,32 @@ let scene, camera, renderer, mesh, animationId
 let isDragging = false
 let previousMousePosition = { x: 0, y: 0 }
 
+function createTriangularPrismGeometry() {
+  const triangle = new THREE.Shape()
+  triangle.moveTo(0, 1.15)
+  triangle.lineTo(-1.15, -0.85)
+  triangle.lineTo(1.15, -0.85)
+  triangle.lineTo(0, 1.15)
+
+  const geometry = new THREE.ExtrudeGeometry(triangle, {
+    depth: 1.9,
+    bevelEnabled: false
+  })
+
+  geometry.center()
+  return geometry
+}
+
 function createShape(shapeType) {
   let geometry
   
   switch (shapeType) {
     case 'cube':
       geometry = new THREE.BoxGeometry(2, 2, 2)
+      break
+    case 'cuboid':
+    case 'rectangular_prism':
+      geometry = new THREE.BoxGeometry(2.8, 1.5, 1.8)
       break
     case 'sphere':
       geometry = new THREE.SphereGeometry(1.2, 32, 32)
@@ -31,7 +51,29 @@ function createShape(shapeType) {
       geometry = new THREE.ConeGeometry(1, 2, 32)
       break
     case 'pyramid':
-      geometry = new THREE.ConeGeometry(1.2, 2, 4)
+    case 'square_pyramid':
+      geometry = new THREE.ConeGeometry(1.35, 2.1, 4)
+      break
+    case 'triangular_prism':
+      geometry = createTriangularPrismGeometry()
+      break
+    case 'pentagonal_prism':
+      geometry = new THREE.CylinderGeometry(1.15, 1.15, 2, 5)
+      break
+    case 'hexagonal_prism':
+      geometry = new THREE.CylinderGeometry(1.15, 1.15, 2, 6)
+      break
+    case 'octahedron':
+      geometry = new THREE.OctahedronGeometry(1.45)
+      break
+    case 'tetrahedron':
+      geometry = new THREE.TetrahedronGeometry(1.55)
+      break
+    case 'dodecahedron':
+      geometry = new THREE.DodecahedronGeometry(1.25)
+      break
+    case 'icosahedron':
+      geometry = new THREE.IcosahedronGeometry(1.25)
       break
     case 'torus':
       geometry = new THREE.TorusGeometry(1, 0.4, 16, 100)
@@ -184,8 +226,10 @@ function cleanup() {
   }
   
   if (mesh) {
-    mesh.geometry.dispose()
-    mesh.material.dispose()
+    mesh.traverse((child) => {
+      if (child.geometry) child.geometry.dispose()
+      if (child.material) child.material.dispose()
+    })
   }
 }
 

@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 export const themes = [
   { id: 'hogwarts',   label: 'Hogwarts',    emoji: '⚡', description: 'The classic Hogwarts look' },
@@ -22,6 +22,10 @@ function loadSavedTheme() {
 }
 
 const currentTheme = ref(loadSavedTheme())
+const activeTheme = computed(() => themes.find(theme => theme.id === currentTheme.value) || themes[0])
+const activeHouseName = computed(() => activeTheme.value.label)
+const activeHouseEmoji = computed(() => activeTheme.value.emoji)
+const activeHousePointsLabel = computed(() => `${activeHouseName.value} Points`)
 
 function applyTheme(id) {
   // Remove all theme classes from <html>
@@ -42,5 +46,12 @@ watch(currentTheme, (id) => {
 })
 
 export function useTheme() {
-  return { currentTheme, themes }
+  return {
+    currentTheme,
+    themes,
+    activeTheme,
+    activeHouseName,
+    activeHouseEmoji,
+    activeHousePointsLabel
+  }
 }

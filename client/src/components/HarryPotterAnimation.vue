@@ -1,5 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+import { useTheme } from '../composables/useTheme'
 
 const props = defineProps({
   streak: Number,
@@ -10,8 +11,10 @@ const props = defineProps({
   }
 })
 
+const { activeHouseName, activeHouseEmoji } = useTheme()
+
 // Different animations based on trigger type
-const animations = {
+const animations = computed(() => ({
   streak: [
     {
       emoji: '🧙‍♂️✨',
@@ -20,7 +23,7 @@ const animations = {
       message: `${props.streak} spells cast perfectly!`
     },
     {
-      emoji: '⚡🦅',
+      emoji: '⚡🦉',
       title: 'Wingardium Leviosa!',
       subtitle: 'You\'re soaring through the challenges!',
       message: `${props.streak} correct answers in a row!`
@@ -32,8 +35,8 @@ const animations = {
       message: `${props.streak} questions mastered!`
     },
     {
-      emoji: '🦁🏆',
-      title: 'Ten Points to Gryffindor!',
+      emoji: `${activeHouseEmoji.value}🏆`,
+      title: `Ten Points to ${activeHouseName.value}!`,
       subtitle: 'Outstanding performance!',
       message: `${props.streak} perfect answers!`
     }
@@ -72,13 +75,13 @@ const animations = {
       message: 'Continue your magical journey!'
     }
   ]
-}
+}))
 
 // Select a random animation based on trigger type
 const selectedAnimation = ref(null)
 
 onMounted(() => {
-  const animationList = animations[props.triggerType] || animations.streak
+  const animationList = animations.value[props.triggerType] || animations.value.streak
   selectedAnimation.value = animationList[Math.floor(Math.random() * animationList.length)]
 })
 </script>
