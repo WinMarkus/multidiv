@@ -213,6 +213,19 @@ async function submitSelectedAnswer(option) {
   submitAnswer()
 }
 
+function skipQuestion() {
+  if (isSubmitting.value) return
+  isSubmitting.value = true
+  feedback.value = '⏭️ Skipped! Loading another question...'
+  userAnswer.value = ''
+  showExplanation.value = false
+  explanation.value = null
+
+  setTimeout(() => {
+    fetchProblem()
+  }, 350)
+}
+
 function toggleProblemType() {
   // Cycle through all four problem types
   const types = ['multiplication', 'division', 'addition', 'subtraction', 'probability']
@@ -403,14 +416,23 @@ function closeChallengeMode() {
             </button>
           </div>
 
-          <button
-            v-if="!useMultiselect"
-            @click="submitAnswer"
-            :disabled="!userAnswer || isSubmitting"
-            class="btn-primary w-full text-lg disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            Cast Answer ✨
-          </button>
+          <div class="grid w-full gap-3 sm:grid-cols-[1fr_auto]">
+            <button
+              v-if="!useMultiselect"
+              @click="submitAnswer"
+              :disabled="!userAnswer || isSubmitting"
+              class="btn-primary w-full text-lg disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              Cast Answer ✨
+            </button>
+            <button
+              @click="skipQuestion"
+              :disabled="isSubmitting"
+              class="btn-secondary w-full text-lg disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto"
+            >
+              Skip ⏭️
+            </button>
+          </div>
         </div>
 
         <div v-if="feedback" class="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
