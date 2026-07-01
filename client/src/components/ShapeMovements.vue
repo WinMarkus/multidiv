@@ -31,7 +31,7 @@ const challenges = [
     level: 1,
     mode: 'choice',
     title: 'Mirror Shield Spell',
-    question: 'Which spell changed the shield?',
+    question: 'Which movement changed the shield?',
     shape: 'shield',
     answer: 'Flip',
     target: { x: 0, y: 0, rotation: 0, flipX: true },
@@ -41,7 +41,7 @@ const challenges = [
     level: 1,
     mode: 'choice',
     title: 'Sliding Tile Charm',
-    question: 'Which spell moved the square without turning it?',
+    question: 'Which movement shifted the square without turning it?',
     shape: 'square',
     answer: 'Slide',
     target: { x: 50, y: 0, rotation: 0, flipX: false },
@@ -51,7 +51,7 @@ const challenges = [
     level: 2,
     mode: 'choice',
     title: 'Turning Triangle Charm',
-    question: 'Which spell changed the triangle by rotating it?',
+    question: 'Which movement rotated the triangle?',
     shape: 'triangle',
     answer: 'Turn',
     target: { x: 0, y: 0, rotation: 90, flipX: false },
@@ -61,7 +61,7 @@ const challenges = [
     level: 2,
     mode: 'cast',
     title: 'Slide to the Glowing Rune',
-    question: 'Cast movement spells until the triangle sits on the glowing ghost shape.',
+    question: 'Move the triangle until it sits on the glowing ghost shape.',
     shape: 'triangle',
     target: { x: 60, y: 0, rotation: 0, flipX: false },
     hint: 'Use Slide → once.'
@@ -82,7 +82,7 @@ const challenges = [
     question: 'Flip the flag so it becomes the mirror image.',
     shape: 'flag',
     target: { x: 0, y: 0, rotation: 0, flipX: true },
-    hint: 'Use the Flip spell once.'
+    hint: 'Use Flip once.'
   },
   {
     level: 5,
@@ -132,8 +132,8 @@ const challenges = [
     pieces: [
       { id: 'body', label: 'body triangle', points: '0,-56 64,58 -64,58', color: '#FFD700', start: { x: 72, y: 84, rotation: 180, flipX: false }, target: { x: 210, y: 180, rotation: 0, flipX: false } },
       { id: 'head', label: 'head square', points: '-38,-38 38,-38 38,38 -38,38', color: '#AA96DA', start: { x: 80, y: 230, rotation: 0, flipX: false }, target: { x: 210, y: 96, rotation: 45, flipX: false } },
-      { id: 'left-wing', label: 'left wing', points: '0,-42 48,42 -48,42', color: '#4ECDC4', start: { x: 196, y: 254, rotation: 270, flipX: false }, target: { x: 148, y: 172, rotation: 325, flipX: false } },
-      { id: 'right-wing', label: 'right wing', points: '0,-42 48,42 -48,42', color: '#95E1D3', start: { x: 314, y: 250, rotation: 90, flipX: false }, target: { x: 272, y: 172, rotation: 35, flipX: false } },
+      { id: 'left-wing', label: 'left wing', points: '0,-42 48,42 -48,42', color: '#4ECDC4', start: { x: 196, y: 254, rotation: 270, flipX: false }, target: { x: 148, y: 172, rotation: 315, flipX: false } },
+      { id: 'right-wing', label: 'right wing', points: '0,-42 48,42 -48,42', color: '#95E1D3', start: { x: 314, y: 250, rotation: 90, flipX: false }, target: { x: 272, y: 172, rotation: 45, flipX: false } },
       { id: 'beak', label: 'beak', points: '0,-20 24,20 -24,20', color: '#F38181', start: { x: 330, y: 82, rotation: 180, flipX: false }, target: { x: 210, y: 130, rotation: 180, flipX: false } }
     ],
     hint: 'The owl is symmetric: wings belong left and right, the beak points down.'
@@ -170,6 +170,15 @@ const typeLabel = computed(() => {
     mirror: 'Symmetry Builder',
     creature: 'Cut-Shape Creature'
   }[currentChallenge.value.mode]
+})
+
+const checkButtonLabel = computed(() => {
+  if (!currentChallenge.value) return 'Check answer'
+  return {
+    cast: 'Check movement',
+    mirror: 'Check mirror image',
+    creature: 'Check creature'
+  }[currentChallenge.value.mode] || 'Check answer'
 })
 
 function defaultTransform() {
@@ -327,14 +336,17 @@ function creatureIsCorrect() {
   return pieces.value.length > 0 && pieces.value.every(pieceIsPlaced)
 }
 
-function submitAnswer() {
+function submitAnswer(answerOverride = null) {
   if (!currentChallenge.value || showFeedback.value) return
-  if (currentChallenge.value.mode === 'choice' && !selectedAnswer.value) return
 
+  const answerToCheck = answerOverride ?? selectedAnswer.value
+  if (currentChallenge.value.mode === 'choice' && !answerToCheck) return
+
+  if (currentChallenge.value.mode === 'choice') selectedAnswer.value = answerToCheck
   attempts.value++
 
   let isCorrect = false
-  if (currentChallenge.value.mode === 'choice') isCorrect = selectedAnswer.value === currentChallenge.value.answer
+  if (currentChallenge.value.mode === 'choice') isCorrect = answerToCheck === currentChallenge.value.answer
   if (currentChallenge.value.mode === 'cast') isCorrect = sameTransform(transform.value, currentChallenge.value.target)
   if (currentChallenge.value.mode === 'mirror') isCorrect = mirrorIsCorrect()
   if (currentChallenge.value.mode === 'creature') isCorrect = creatureIsCorrect()
@@ -354,7 +366,7 @@ function submitAnswer() {
       : `${activeHouseEmoji.value} Brilliant spellwork! 15 points to ${activeHouseName.value}.`
 
     showFeedback.value = true
-    setTimeout(newChallenge, 2400)
+    setTimeout(newChallenge, 1600)
   } else {
     streak.value = 0
     feedback.value = `Not quite yet. ${currentChallenge.value.hint}`
@@ -363,8 +375,13 @@ function submitAnswer() {
     setTimeout(() => {
       showFeedback.value = false
       feedback.value = ''
-    }, 3200)
+      selectedAnswer.value = ''
+    }, 2400)
   }
+}
+
+function selectChoiceAnswer(option) {
+  submitAnswer(option)
 }
 
 onMounted(newChallenge)
@@ -467,9 +484,10 @@ onMounted(newChallenge)
           <button
             v-for="option in ['Flip', 'Slide', 'Turn']"
             :key="option"
-            @click="selectedAnswer = option"
+            @click="selectChoiceAnswer(option)"
+            :disabled="showFeedback"
             :class="[
-              'px-6 py-4 text-xl font-hp rounded-lg border-2 transition-all duration-300 hover:scale-105',
+              'px-6 py-4 text-xl font-hp rounded-lg border-2 transition-all duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-70',
               selectedAnswer === option ? 'bg-hp-gold text-hp-navy border-hp-gold shadow-lg' : 'bg-white/10 text-hp-gold border-hp-gold/50 hover:bg-hp-gold/20'
             ]"
           >
@@ -563,10 +581,11 @@ onMounted(newChallenge)
 
       <div class="mt-8 flex flex-col items-center gap-4">
         <button
+          v-if="currentChallenge.mode !== 'choice'"
           @click="submitAnswer"
           class="w-full max-w-md bg-hp-gold hover:bg-hp-bronze text-hp-navy font-hp font-bold px-8 py-4 rounded-lg transition-all duration-300 hover:scale-105 shadow-lg text-xl"
         >
-          Cast Shape Spell ✨
+          {{ checkButtonLabel }} ✓
         </button>
 
         <div v-if="showFeedback" class="text-center">
