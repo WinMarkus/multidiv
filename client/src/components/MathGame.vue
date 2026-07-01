@@ -27,6 +27,7 @@ const useMultiselect = ref(false)
 const answerOptions = ref([])
 const answerInputRef = ref(null)
 const showChallengeMode = ref(false)
+const isSubmitting = ref(false)
 
 const score = computed(() => {
   if (totalAttempts.value === 0) return 0
@@ -93,6 +94,7 @@ async function fetchProblem() {
     showExplanation.value = false
     explanation.value = null
     feedback.value = ''
+    isSubmitting.value = false
     
     // Randomly decide between input and multiselect (30% chance for multiselect)
     useMultiselect.value = Math.random() < 0.3
@@ -109,11 +111,13 @@ async function fetchProblem() {
     }
   } catch (error) {
     console.error('Error fetching problem:', error)
+    isSubmitting.value = false
   }
 }
 
 async function submitAnswer() {
-  if (!userAnswer.value || !currentProblem.value) return
+  if (!userAnswer.value || !currentProblem.value || isSubmitting.value) return
+  isSubmitting.value = true
   
   totalAttempts.value++
   questionsSinceLastJoke.value++
@@ -198,7 +202,15 @@ async function submitAnswer() {
     }
   } catch (error) {
     console.error('Error checking answer:', error)
+    isSubmitting.value = false
   }
+}
+
+async function submitSelectedAnswer(option) {
+  if (isSubmitting.value) return
+  userAnswer.value = option.toString()
+  await nextTick()
+  submitAnswer()
 }
 
 function toggleProblemType() {
@@ -378,9 +390,10 @@ function closeChallengeMode() {
             <button
               v-for="option in answerOptions"
               :key="option"
-              @click="userAnswer = option.toString()"
+              @click="submitSelectedAnswer(option)"
+              :disabled="isSubmitting"
               :class="[
-                'min-h-16 rounded-2xl border px-5 py-4 text-center text-2xl font-black transition-all duration-200 active:scale-95',
+                'min-h-16 rounded-2xl border px-5 py-4 text-center text-2xl font-black transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70',
                 userAnswer === option.toString()
                   ? 'border-hp-gold bg-hp-gold text-hp-navy shadow-lg'
                   : 'border-hp-gold/25 bg-white/10 text-hp-gold hover:bg-white/15'
@@ -390,7 +403,12 @@ function closeChallengeMode() {
             </button>
           </div>
 
-          <button @click="submitAnswer" :disabled="!userAnswer" class="btn-primary w-full text-lg disabled:cursor-not-allowed disabled:opacity-45">
+          <button
+            v-if="!useMultiselect"
+            @click="submitAnswer"
+            :disabled="!userAnswer || isSubmitting"
+            class="btn-primary w-full text-lg disabled:cursor-not-allowed disabled:opacity-45"
+          >
             Cast Answer ✨
           </button>
         </div>
